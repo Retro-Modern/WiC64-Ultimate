@@ -20,8 +20,11 @@ last versions (U64E2 Beta 5, C64U Beta 2) it is maintained here by
 | `c64u/` | C64 Ultimate, firmware 1.1.0 | Beta 2 + `WOLFSSL_ALT_CERT_CHAINS` | **not built, not tested** (no device here) |
 | `tests/` | test programs (64tass) and telnet helpers | | |
 
-Ready-to-use packages are attached in the Forum64 thread:
-https://www.forum64.de/index.php?thread/167059/
+**Download** (ready-to-use package, CFW + ESP app + restore + Control Center):
+- https://retro-modern.net/downloads.html#wic64
+- GitHub release: https://github.com/Retro-Modern/WiC64-Ultimate/releases/latest
+
+Discussion (German): https://www.forum64.de/index.php?thread/167059/
 
 ### Changes since Beta 5 (U64E2)
 
@@ -106,8 +109,11 @@ seinen letzten Fassungen (U64E2 Beta 5, C64U Beta 2) pflegt
 | `c64u/` | C64 Ultimate, Firmware 1.1.0 | Beta 2 + `WOLFSSL_ALT_CERT_CHAINS` | **weder gebaut noch getestet** (kein Gerät) |
 | `tests/` | Testprogramme (64tass) und Telnet-Helfer | | |
 
-Fertige Pakete hängen im Forum64-Thema:
-https://www.forum64.de/index.php?thread/167059/
+**Download** (fertiges Paket: CFW, ESP-App, Wiederherstellung, Control Center):
+- https://retro-modern.net/downloads.html#wic64
+- GitHub-Release: https://github.com/Retro-Modern/WiC64-Ultimate/releases/latest
+
+Diskussion: https://www.forum64.de/index.php?thread/167059/
 
 ### Änderungen gegenüber Beta 5 (U64E2)
 
