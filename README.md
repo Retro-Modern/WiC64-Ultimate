@@ -55,7 +55,8 @@ installation ~50 s) both worked.
 
 ### Known issues
 
-- WiC64 Status says "TLS engine: wolfSSL" although requests go through the ESP.
+- WiC64 Status shows the TLS engine of the last HTTPS connection ("ESP TLS (BIO)"
+  or "wolfSSL" on the CPU); before the first connection it says "wolfSSL".
 - C64U: no build on macOS (`setup.py` requires Linux x86_64 or WSL2).
 
 ## Build
@@ -144,7 +145,8 @@ Installation ~50 s) liefen.
 
 ### Bekannte Punkte
 
-- WiC64 Status zeigt „TLS engine: wolfSSL“, obwohl die Anfragen über den ESP laufen.
+- WiC64 Status zeigt den TLS-Weg der letzten HTTPS-Verbindung („ESP TLS (BIO)“
+  oder „wolfSSL“ auf der CPU); vor der ersten Verbindung steht dort „wolfSSL“.
 - C64U: kein Bau auf macOS (`setup.py` verlangt Linux x86_64 oder WSL2).
 
 ## Bauen
