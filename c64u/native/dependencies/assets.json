@@ -1,0 +1,32 @@
+{
+  "roms/basic.bin": {
+    "bytes": 8192,
+    "sha256": "89878cea0a268734696de11c4bae593eaaa506465d2029d619c0e0cbccdfa62d",
+    "url": "https://raw.githubusercontent.com/spiffycrew/Spiffy_Ultimate/3b582da78c57fb5b2d53bacb6a64dea5a4535f66/roms/basic.bin"
+  },
+  "roms/chars.bin": {
+    "bytes": 2048,
+    "sha256": "e0774c6d7398acd1bb6038fee676cb3a3b49e65d27042c3a05f6df25892d1b74",
+    "url": "https://raw.githubusercontent.com/spiffycrew/Spiffy_Ultimate/3b582da78c57fb5b2d53bacb6a64dea5a4535f66/roms/chars.bin"
+  },
+  "roms/raminit.bin": {
+    "bytes": 65536,
+    "sha256": "e30a8187f5bcdc6af6836d72e897483ceece174e0aaab13dda15ebf93e06710f",
+    "url": "https://raw.githubusercontent.com/spiffycrew/Spiffy_Ultimate/3b582da78c57fb5b2d53bacb6a64dea5a4535f66/roms/raminit.bin"
+  },
+  "roms/characters.901225-01.bin": {
+    "bytes": 4096,
+    "sha256": "fd0d53b8480e86163ac98998976c72cc58d5dd8eb824ed7b829774e74213b420",
+    "url": "https://raw.githubusercontent.com/spiffycrew/Spiffy_Ultimate/3b582da78c57fb5b2d53bacb6a64dea5a4535f66/roms/characters.901225-01.bin"
+  },
+  "roms/kernal.901227-03.bin": {
+    "bytes": 8192,
+    "sha256": "83c60d47047d7beab8e5b7bf6f67f80daa088b7a6a27de0d7e016f6484042721",
+    "url": "https://raw.githubusercontent.com/spiffycrew/Spiffy_Ultimate/3b582da78c57fb5b2d53bacb6a64dea5a4535f66/roms/kernal.901227-03.bin"
+  },
+  "software/ModPlayer_16k/module.bin": {
+    "bytes": 16384,
+    "sha256": "fa1484bdd494c83cfe6436febde768b2c368f1ed0af7837b6a8c06fde96af038",
+    "url": "https://raw.githubusercontent.com/spiffycrew/Spiffy_Ultimate/3b582da78c57fb5b2d53bacb6a64dea5a4535f66/software/ModPlayer_16k/module.bin"
+  }
+}

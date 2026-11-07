@@ -1,0 +1,267 @@
+/*
+ * file_info.h
+ *
+ *  Created on: Apr 27, 2015
+ *      Author: Gideon
+ */
+
+#ifndef FILESYSTEM_FILE_INFO_H_
+#define FILESYSTEM_FILE_INFO_H_
+
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "indexed_list.h"
+#include "pattern.h"
+#include "cbmname.h"
+
+/* File attribute bits for directory entry */
+
+#define AM_RDO   0x01    /* Read only */
+#define AM_HID   0x02    /* Hidden */
+#define AM_SYS   0x04    /* System */
+#define AM_VOL   0x08    /* Volume label */
+#define AM_LFN   0x0F    /* LFN entry */
+#define AM_DIR   0x10    /* Directory */
+#define AM_ARC   0x20    /* Archive */
+#define AM_MASK  0x3F    /* Mask of defined bits */
+#define AM_HASCHILDREN 0x40 /* Is the kind of file that might have a directory listing */
+
+#define NAME_FORMAT_DIRECT 0x01
+#define NAME_FORMAT_CBM    0x02
+
+class FileSystem;
+
+class FileInfo
+{
+    FileInfo()
+    {
+    	init();
+    }
+
+	int compare_impl(FileInfo *other)
+	{
+		if ((attrib & AM_DIR) && !(other->attrib & AM_DIR))
+			return -1;
+		if (!(attrib & AM_DIR) && (other->attrib & AM_DIR))
+			return 1;
+
+	    int by_name = strcasecmp(lfname, other->lfname);
+		return by_name;
+	}
+
+public:
+	FileSystem *fs;  /* Reference to file system, to uniquely identify file */
+    uint32_t  cluster; /* To compare if a file is the same even after rename */
+    uint32_t  size;	 /* File size */
+	uint16_t  date;	 /* Last modified date */
+	uint16_t  time;	 /* Last modified time */
+    uint16_t  lfsize;
+    uint8_t   attrib;  /* Attribute */
+    uint8_t   name_format;
+    uint8_t   cbm_filetype; /* the CBM directory type byte: the type in bits 0 to 3 and bit 7
+                               set when the entry was closed, 0 when the file system has none */
+    char   *lfname;
+	char    extension[4];
+
+    void init()
+    {
+    	memset(this, 0, sizeof(FileInfo));
+    }
+
+    FileInfo(int namesize)
+	{
+    	init();
+		lfsize = namesize;
+	    if (namesize) {
+	        lfname = new char[namesize];
+			lfname[0] = '\0';
+		}
+    }
+
+    FileInfo(const char *name)
+    {
+    	init();
+		lfsize = strlen(name)+1;
+        lfname = new char[lfsize];
+        strcpy(lfname, name);
+    }
+
+    FileInfo(FileInfo &i)
+    {
+    	lfsize = i.lfsize;
+    	lfname = new char[lfsize];
+    	copyfrom(&i);
+    }
+
+    FileInfo(FileInfo *i, const char *new_name)
+    {
+        fs = i->fs;
+        cluster = i->cluster;
+        size = i->size;
+        date = i->date;
+        time = i->time;
+		lfsize = strlen(new_name)+1;
+        lfname = new char[lfsize];
+        strcpy(lfname, new_name);
+        attrib = i->attrib;
+        extension[0] = 0;
+        name_format = i->name_format;
+        cbm_filetype = i->cbm_filetype;
+    }
+
+	~FileInfo()
+	{
+		if(lfname)
+	        delete[] lfname;
+    }
+
+	void copyfrom(FileInfo *i) {
+    	fs = i->fs;
+        cluster = i->cluster;
+        size = i->size;
+        date = i->date;
+        time = i->time;
+        strncpy(lfname, i->lfname, lfsize);
+        strncpy(extension, i->extension, 4);
+        attrib = i->attrib;
+        extension[3] = 0;
+        name_format = i->name_format;
+        cbm_filetype = i->cbm_filetype;
+	}
+
+	bool is_directory(void) {
+	    return (attrib & AM_DIR);
+	}
+
+	bool is_writable(void);
+
+	void print_info(void) {
+		printf("File System: %p\n", fs);
+		printf("Cluster    : %d\n", cluster);
+		printf("Size       : %d\n", size);
+		printf("Date       : %d\n", date);
+		printf("Time	   : %d\n", time);
+		printf("LFSize     : %d\n", lfsize);
+		printf("LFname     : %s\n", lfname);
+		printf("Attrib:    : %b\n", attrib);
+		printf("Extension  : %s\n", extension);
+	}
+
+    char *generate_fat_name(char *buffer, int max_len)
+    {
+        if (max_len <= 0) {
+            return buffer;
+        }
+        if (name_format & NAME_FORMAT_CBM) {
+            petscii_to_fat(lfname, buffer, max_len);
+            add_extension(buffer, extension, max_len);
+        } else {
+            strncpy(buffer, lfname, max_len);
+            buffer[max_len - 1] = 0;
+        }
+        return buffer;
+    }
+
+    // Decode a complete CBM name into 17 bytes, using the CBM filesystem's own name or
+    // CbmFileName's host mapping (including CVT). Lossless also requires canonical storage,
+    // ignoring host letter case; presentation may accept other well-formed spellings.
+    bool get_cbm_name(char *pet, bool lossless = true)
+    {
+        if (name_format & NAME_FORMAT_CBM) {
+            strncpy(pet, lfname, 16);
+            pet[16] = 0;
+            return pet[0] != 0;
+        }
+        CbmFileName cbm;
+        if (is_directory()) {
+            cbm.init_dir(lfname);
+        } else {
+            cbm.init(lfname);
+        }
+        strcpy(pet, cbm.getName());
+        if (!lossless) {
+            int end = strlen(lfname);
+            if (cbm.hadExtension()) {
+                char ext[4];
+                int base = get_extension(lfname, ext);
+                if (end - base != 4) {
+                    return false;
+                }
+                end = base;
+            }
+            // Validate before using the permissive legacy decoder: no partial escapes,
+            // embedded zero or silently truncated name may become an editable label.
+            int bytes = 0;
+            for (int i = 0; i < end;) {
+                if (lfname[i] == '{') {
+                    int start = ++i;
+                    while ((i < end) && (lfname[i] != '}')) {
+                        if ((i + 1 >= end) ||
+                            !strchr("0123456789abcdefABCDEF", lfname[i]) ||
+                            !strchr("0123456789abcdefABCDEF", lfname[i + 1]) ||
+                            ((lfname[i] == '0') && (lfname[i + 1] == '0'))) {
+                            return false;
+                        }
+                        i += 2;
+                    }
+                    if (i == end) {
+                        return false;
+                    }
+                    bytes += (i - start) / 2;
+                    i++;
+                } else {
+                    if ((lfname[i] == '}') || ((uint8_t)lfname[i] < 32) || ((uint8_t)lfname[i] >= 127)) {
+                        return false;
+                    }
+                    bytes++;
+                    i++;
+                }
+            }
+            return (bytes > 0) && (bytes <= 16) && ((int)strlen(pet) == bytes);
+        }
+        char host[64];
+        petscii_to_fat(pet, host, sizeof(host));
+        int len = strlen(host);
+        const char *ext = lfname + len;
+        if (!pet[0] || strncasecmp(host, lfname, len)) {
+            return false;
+        }
+        return cbm.hadExtension() ? ((ext[0] == '.') && (strlen(ext) == 4)) : !*ext;
+    }
+
+    // bool match_to_pattern(CbmFileName &cbm)
+    // {
+    //     bool match_name = pattern_match_escaped(cbm.getName(), lfname);
+    //     bool match_ext  = !cbm.hadExtension() || pattern_match(cbm.getExtension(), extension);
+    //     return match_name && match_ext;
+    // }
+
+    // bool match_to_pattern(const char *pattern, CbmFileName &cbm)
+    // {
+    //     if (name_format & NAME_FORMAT_CBM) {
+    //         if (!cbm.isInitialized()) { // optimization, such that init is only done once for a whole bunch of files
+    //             cbm.init(pattern);
+    //         }
+    //         return match_to_pattern(cbm);
+    //     }
+    //     return pattern_match(pattern, lfname, false); // no escaping! Be aware!
+    // }
+
+	static int compare(IndexedList<FileInfo *> *list, int a, int b)
+	{
+	//	printf("Compare %d and %d: ", a, b);
+		FileInfo *obj_a = (*list)[a];
+		FileInfo *obj_b = (*list)[b];
+
+		if(!obj_b)
+			return 1;
+		if(!obj_a)
+			return -1;
+
+		return obj_a->compare_impl(obj_b);
+	}
+};
+
+
+#endif /* FILESYSTEM_FILE_INFO_H_ */

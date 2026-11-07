@@ -1,0 +1,15 @@
+{
+  "name": "wolfSSL",
+  "version": "5.9.4",
+  "url": "https://www.wolfssl.com/wolfssl-5.9.4.zip",
+  "archive": "wolfssl-5.9.4.zip",
+  "archive_bytes": 36334939,
+  "archive_sha256": "9cd0d69d208d025b16836c177658cc0deebc2a85c4b60898c9bc546bc6cbdf18",
+  "expected_official_download_sha256": "9cd0d69d208d025b16836c177658cc0deebc2a85c4b60898c9bc546bc6cbdf18",
+  "license": "GPLv3",
+  "official_sources": [
+    "https://www.wolfssl.com/download/",
+    "https://github.com/wolfSSL/wolfssl/releases/tag/v5.9.4-stable",
+    "https://www.wolfssl.com/license/"
+  ]
+}

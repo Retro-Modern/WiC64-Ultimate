@@ -1,0 +1,88 @@
+WiC64 U64E2 Beta5 - Legal notices
+
+This is a modified Ultimate firmware distribution. WiC64 U64E2 project
+modifications, dated 2026-11-07, are released under GPL-3.0-or-later.
+The project application sources, configurations and build scripts are
+included, together with the prebuilt C64 resources identified below. The licenses and copyright notices of individual
+components remain applicable. See licenses/GPL-3.0.txt and the original
+notices in the source files. This software is supplied without warranty
+to the extent permitted by the applicable licenses and law.
+
+Includes modifications by Retro-Modern (sanstarr), GPL-3.0-or-later.
+
+Components and license texts
+
+Ultimate firmware: Copyright Gideon Zweijtzer, Daniel Kahlin, Rene Garcia
+and the other authors identified in the source files; GPL-3.0-or-later.
+wolfSSL 5.9.4: Copyright (C) 2006-2026 wolfSSL Inc.; GPL-3.0-or-later.
+Used wolfSSL sources and required headers are included in crypto/.
+
+Native FreeRTOS kernel V10.2.0 and RISC-V port V10.4.6: MIT;
+licenses/FreeRTOS_NATIVE_MIT.txt and FreeRTOS_RISCV_PORT_MIT.txt.
+Native FreeRTOS heap_4.c V8.2.0: GPL-2.0 with the FreeRTOS exception;
+licenses/FreeRTOS_GPL-2.0_with_exception.txt. The corresponding FreeRTOS
+sources, including project modifications, are provided in native/software/
+FreeRTOS/. Copies of these sources are offered with this distribution.
+
+Native lwIP and Micro HTTP Server: BSD-3-Clause; licenses/lwIP_BSD-3-Clause.txt
+and HTTPd_BSD-3-Clause.txt. FatFs: licenses/FatFs.txt. NEORV32 startup: BSD-3-
+Clause, licenses/NEORV32_BSD-3-Clause.txt. jsmn: MIT, licenses/JSMN_MIT.txt.
+Compiler runtime: licenses/GCC_RUNTIME_EXCEPTION-3.1.txt. Native C library:
+licenses/newlib_NATIVE_COPYING.NEWLIB.
+
+ESP-IDF v5.3.1: Copyright (C) 2015-2023 Espressif Systems and the individual
+contributors identified in its source files; Apache-2.0 except where the
+individual component notices provide other terms. The WiFi, PHY and
+coexistence libraries use the same Apache-2.0 text: licenses/Apache-2.0.txt.
+ESP FreeRTOS: MIT; licenses/FreeRTOS_ESP_MIT.txt and
+FreeRTOS_XTENSA_PORT_MIT.txt. ESP lwIP: licenses/lwIP_ESP_COPYING.txt.
+mbedTLS: distributed here under the Apache-2.0 option in
+licenses/mbedTLS_LICENSE.txt. WPA: licenses/wpa_supplicant_COPYING.txt,
+wpa_supplicant_BSD-3-Clause.txt and wpa_supplicant_attributions.txt.
+HTTP Parser: licenses/HTTP_PARSER_LICENSE.txt. TLSF: BSD-3-Clause,
+licenses/TLSF_BSD-3-Clause.txt. Xtensa code and headers: MIT texts in
+licenses/XTENSA_*.txt. ESP C library: licenses/newlib_ESP_COPYING.NEWLIB.
+
+Mozilla/curl CA certificate data is covered by MPL-2.0. The native editable
+PEM source is certificates/cacert.pem. The editable PEM
+source used by the ESP application is included at
+esp/wic64/software/u64ctrl/ca/cacert.pem, with its original origin header.
+See licenses/MPL-2.0.txt and https://curl.se/docs/caextract.html .
+
+The separate assets/WIC64CC.PRG application includes the WiC64 assembly
+library, Copyright 2023 Henning Liebenau. Its BSD-2-Clause copyright notice,
+conditions and disclaimer are reproduced in
+licenses/WiC64_LIBRARY_BSD-2-Clause.txt. The Control Center application's
+sources are not included in this firmware source package.
+
+External corresponding SDK sources
+
+The unmodified SDK sources used by both ESP applications are available
+without charge from the official Espressif repository:
+  https://github.com/espressif/esp-idf
+Exact version: v5.3.1
+Exact commit: c8fc5f643b7a7b0d3b182d3df610844e3dc9bd74
+  https://github.com/espressif/esp-idf/tree/c8fc5f643b7a7b0d3b182d3df610844e3dc9bd74
+
+Retrieve that source revision and all its pinned submodules with:
+  git clone --branch v5.3.1 --depth 1 https://github.com/espressif/esp-idf.git esp-idf
+  git -C esp-idf checkout --detach c8fc5f643b7a7b0d3b182d3df610844e3dc9bd74
+  git -C esp-idf submodule update --init --recursive
+
+The SDK's own original license and copyright notices are included in that
+source tree. These SDK sources supply firmware components as well as build
+support; they are provided separately from the application sources above.
+Prebuilt C64 resources
+
+The following binary inputs are included unchanged from the official
+Ultimate firmware repository at commit
+60f16dc152177f62901bda7c35692f6be2fc0cb5:
+  native/roms/basic.bin: Commodore 64 BASIC ROM 901226-01, 8192 bytes.
+  native/software/ModPlayer_16k/module.bin: C64 MOD Player cartridge,
+  16384 bytes.
+Upstream: https://github.com/GideonZ/1541ultimate/tree/60f16dc152177f62901bda7c35692f6be2fc0cb5
+
+Corresponding assembler sources for these two binary inputs are not supplied
+by this package. Their original authors' rights remain applicable. The
+project modifications' license statement above does not grant additional
+rights in these upstream binary resources.

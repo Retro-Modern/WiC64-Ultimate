@@ -1,0 +1,23 @@
+#ifndef FILETYPE_PRG_H
+#define FILETYPE_PRG_H
+
+#include "filetypes.h"
+#include "browsable_root.h"
+
+class SubsysCommand;
+
+class FileTypePRG : public FileType
+{
+	BrowsableDirEntry *node;
+    static SubsysResultCode_e execute_st(SubsysCommand *);
+public:
+    FileTypePRG(BrowsableDirEntry *n);
+    ~FileTypePRG();
+
+    int   fetch_context_items(IndexedList<Action *> &list);
+    static FileType *test_type(BrowsableDirEntry *obj);
+    static SubsysResultCode_t start_prg(const char *filename, bool run);
+};
+
+
+#endif

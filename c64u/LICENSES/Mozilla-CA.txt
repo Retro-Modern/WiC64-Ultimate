@@ -1,0 +1,8 @@
+Mozilla CA certificate data
+
+The supplied CA certificate data is converted from Mozilla's certificate
+store by curl and is governed by the Mozilla Public License, version 2.0.
+The certificate-data headers and notices are retained.
+
+License: https://mozilla.org/MPL/2.0/
+Source data: https://curl.se/docs/caextract.html

@@ -1,0 +1,19 @@
+WiC64 C64U Beta2
+
+Firmware and ESP source code is distributed under GNU GPL version 3,
+except where individual source files identify other applicable terms.
+Original copyright, license and warranty notices remain in the sources.
+License text: LICENSES/GPL-3.0.txt.
+
+Modified for WiC64 C64U by Dirk Becker. Modification date: 2026-11-07.
+Includes contributions by Retro-Modern.
+
+FreeRTOS kernel 10.2.0 source retains its MIT notices. The heap_4
+implementation retains FreeRTOS 8.2.0 GPLv2-with-exception terms in
+LICENSES/FreeRTOS-GPL-2.0-with-exception.txt. The corresponding FreeRTOS
+source is included under native/src/software/FreeRTOS.
+
+The supplied CA certificate data is governed by MPL 2.0;
+see LICENSES/Mozilla-CA.txt.
+
+

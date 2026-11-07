@@ -1,0 +1,66 @@
+#ifndef KEYBOARD_C64_H
+#define KEYBOARD_C64_H
+
+#include "keyboard.h"
+#include "host.h"
+
+// getch() is away 40 to 115 ms whenever the UI stops the machine, long enough to miss a 40 ms
+// machine:input tap or its release, so these builds scan from a timer at this period in ticks.
+#if !U64 && !RECOVERYAPP && !defined(NO_FILE_ACCESS)
+#define KEYBOARD_C64_TIMER_SCAN 1
+#define KEYBOARD_C64_SCAN_PERIOD_TICKS 2
+#else
+#define KEYBOARD_C64_TIMER_SCAN 0
+#endif
+
+#define KEY_BUFFER_SIZE 16
+
+class GenericHost;
+
+class Keyboard_C64 : public Keyboard
+{
+    GenericHost *host;
+    volatile uint8_t *row_register;
+    volatile uint8_t *col_register;
+    volatile uint8_t *joy_register;
+
+    uint8_t shift_prev;
+    uint8_t mtrx_prev;
+
+    int  repeat_speed;
+    int  first_delay;
+
+    int  delay_count;
+
+    // False after ignore_held_input() until a scan sees no key and no joystick.
+    // Anything held when the menu opens is ignored until it is released.
+    bool armed;
+
+    int key_buffer[KEY_BUFFER_SIZE];
+    volatile int  key_head;
+    volatile int  key_tail;
+    // Held by the user interface task while it drives the CIA itself
+    // (wait_free), so the timer scan keeps its hands off the column select.
+    volatile int  scan_paused;
+    void *scan_timer;
+    static void scan_timer_callback(void *timer);
+    void push_key(int key);
+public:
+    Keyboard_C64(GenericHost *, volatile uint8_t *r, volatile uint8_t *c, volatile uint8_t *j);
+    ~Keyboard_C64();
+
+    static uint8_t scan_keyboard(volatile uint8_t *r, volatile uint8_t *c);
+    static bool joystick_blocks_keyboard(uint8_t observed_active_low, uint8_t injected_active_low);
+    static uint8_t matrixModifierFlag(uint8_t row, uint8_t col);
+    static uint8_t matrixToKeyCode(uint8_t row, uint8_t col, uint8_t shift_flag);
+
+    void scan(void);
+    void set_delays(int, int);
+    int  getch(void);
+    void push_head(int);
+    void wait_free(void);
+    void clear_buffer(void);
+    void ignore_held_input(void);
+};
+
+#endif

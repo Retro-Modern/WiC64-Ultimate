@@ -1,0 +1,34 @@
+components/wpa_supplicant/src/common/dragonfly.c
+/*
+ * Shared Dragonfly functionality
+ * Copyright (c) 2012-2016, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2019, The Linux Foundation
+ *
+ * This software may be distributed under the terms of the BSD license.
+ * See README for more details.
+ */
+
+components/wpa_supplicant/src/common/sae_pk.c
+/*
+ * SAE-PK
+ * Copyright (c) 2020, The Linux Foundation
+ *
+ * This software may be distributed under the terms of the BSD license.
+ * See README for more details.
+ */
+
+components/wpa_supplicant/src/crypto/aes-siv.c
+/*
+ * AES SIV (RFC 5297)
+ * Copyright (c) 2013 Cozybit, Inc.
+ *
+ * This software may be distributed under the terms of the BSD license.
+ * See README for more details.
+ */
+
+components/wpa_supplicant/esp_supplicant/src/crypto/crypto_mbedtls.c
+/*
+ * SPDX-FileCopyrightText: 2020-2024 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */

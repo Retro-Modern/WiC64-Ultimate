@@ -1,0 +1,454 @@
+#ifndef IEC_CHANNEL_H
+#define IEC_CHANNEL_H
+
+#include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+#include "iec_drive.h"
+#include "filemanager.h"
+#include "mystring.h"
+#include "cbmdos_parser.h"
+#include "x00_wrapper.h"
+
+typedef enum _t_channel_state {
+    e_idle, e_filename, e_file, e_dir, e_partlist, e_record, e_buffer, e_complete, e_error, e_status
+    
+} t_channel_state;
+
+// A listing is a BASIC program: load address $0401, then the header line with a link
+// of $0101 (SI-130).
+static uint8_t c_header[32] = { 1,  4,  1,  1,  0,  0, 18, 34,
+                            32, 32, 32, 32, 32, 32, 32, 32,
+                            32, 32, 32, 32, 32, 32, 32, 32,
+                            34, 32, 48, 48, 32, 50, 65,  0 };
+
+class IecCommandChannel;
+
+#define MAX_PARTITIONS 256
+
+// x00 wrappers (SI-144): the header in front of the data of a P00, S00, U00 or R00 file.
+bool iec_x00_probe(FileManager *fm, const char *path, char *cbm_name, filetype_t *type, uint8_t *record_length);
+int iec_entry_name(FileManager *fm, const char *dir_path, FileInfo *info, char *cbm_name, filetype_t& type);
+
+static inline bool is_valid_partition_number(int p)
+{
+    return (p > 0) && (p < MAX_PARTITIONS);
+}
+
+class IecFileSystem;
+
+struct set_part_t
+{
+    int partition;
+    const char *path;
+    const char *name;
+};
+
+class IecPartition {
+    Path *path;
+    FileManager *fm;
+    IecFileSystem *vfs;
+    int partitionNumber;
+    mstring root;
+    mstring full_path;
+    mstring name;
+public:
+    IecPartition(IecFileSystem *vfs, int nr, const char *rt, const char *name)
+    {
+        fm = FileManager::getFileManager();
+        partitionNumber = nr;
+        this->vfs = vfs;
+        this->name = name;
+        path = fm->get_new_path("IEC Partition");
+        SetRoot(rt);
+    }
+
+    ~IecPartition()
+    {
+        fm->release_path(path);
+    }
+
+    void SetRoot(const char *rt)
+    {
+        root = rt;
+        full_path = rt;
+        if(root[-1] != '/') {
+            root += "/";
+            full_path += "/";
+        }
+    }
+
+    void SetName(const char *name)
+    {
+        this->name = name;
+    }
+
+    int GetPartitionNumber(void)
+    {
+        return partitionNumber;
+    }
+
+    bool IsValid(); // implemented in iec_channel.cc, to resolve an illegal forward reference
+
+    bool cd(const char *p)
+    {
+        // zero pointers or zero strings don't need to be considered
+        if (!p || !*p) {
+            return true;
+        }
+        // make a new temporary path in string form
+        Path temp(path);
+        temp.cd(p);
+        const char *rp = temp.get_path();        
+        mstring full = root;
+        full += (rp+1); // strip off the leading slash
+
+        //printf("Now we need to check if the resulting path '%s' is valid\n", full.c_str());
+        // now test the result, if correct copy
+        if (fm->is_path_valid(full.c_str())) {
+            path->cd(p);
+            full_path = root + (rp+1); // strip off the leading slash
+            return true;
+        } 
+        return false;
+    }
+
+    static char *CreateIecName(FileInfo *inf, char *out, filetype_t& type)
+    {
+        bool dir = inf->attrib & AM_DIR;
+        char *ext = inf->extension;
+        memset(out, 0, 24);
+
+        bool cutExtension = false;
+        // A CBM file system reports the directory entry's own type, which the extension
+        // cannot always carry: a GEOS file is given the extension CVT for the host file
+        // system while its type bits say SEQ, PRG or USR (SI-149).
+        static const filetype_t cbm_types[8] = {
+            e_any, e_seq, e_prg, e_usr, e_rel, e_any, e_folder, e_any
+        };
+        if (dir) {
+            type = e_folder;
+        } else if (inf->cbm_filetype) {
+            type = cbm_types[inf->cbm_filetype & 7];
+            cutExtension = true;
+        } else if (strcmp(ext, "PRG") == 0) {
+            type = e_prg;
+            cutExtension = true;
+        } else if (strcmp(ext, "SEQ") == 0) {
+            type = e_seq;
+            cutExtension = true;
+        } else if (strcmp(ext, "REL") == 0) {
+            type = e_rel;
+            cutExtension = true;
+        } else if (strcmp(ext, "USR") == 0) {
+            type = e_usr;
+            cutExtension = true;
+        } else {
+            type = e_any;
+        }
+        if (inf->name_format & NAME_FORMAT_CBM) {
+            strncpy(out, inf->lfname, 16);
+        } else {
+            fat_to_petscii(inf->lfname, cutExtension, out, 16, true);
+        }
+        return out;
+    }
+
+    const char *GetRelativePath()
+    {
+        return path->get_path();
+    }
+
+    const char *GetFullPath()
+    {
+        return full_path.c_str();
+    }
+
+    const char *GetRootPath()
+    {
+        return root.c_str();
+    }
+
+    const char *GetName()
+    {
+        return name.c_str();
+    }
+
+};
+
+class IecFileSystem {
+    FileManager *fm;
+    int currentPartition;
+    IecPartition *partitions[MAX_PARTITIONS];
+    IecDrive *drive;
+public:
+    IecFileSystem(IecDrive *dr)
+    {
+        drive = dr;
+        fm = FileManager::getFileManager();
+        for (int i = 0; i < MAX_PARTITIONS; i++) {
+            partitions[i] = 0;
+        }
+        currentPartition = 1;
+    }
+
+    ~IecFileSystem() 
+    {
+        for (int i = 0; i < MAX_PARTITIONS; i++) {
+            if (partitions[i]) {
+                delete partitions[i];
+            }
+        }
+    }
+
+    // The drive's lock (CR-6), which the menu's partition list also takes.
+    IecDrive *get_drive(void) { return drive; }
+
+    void add_partition(int p, const char *path, const char *name)
+    {
+        if (!is_valid_partition_number(p)) {
+            return;
+        }
+        IecDriveLock guard(drive);
+        if (partitions[p]) {
+            partitions[p]->SetName(name);
+            partitions[p]->SetRoot(path);
+            return;
+        }
+        partitions[p] = new IecPartition(this, p, path, name);
+    }
+
+    void RemovePartition(int p)
+    {
+        if (!is_valid_partition_number(p)) {
+            return;
+        }
+        IecDriveLock guard(drive);
+        if (partitions[p]) {
+            delete partitions[p];
+            partitions[p] = NULL;
+        }
+    }
+
+    const char *GetPartitionPath(int index, bool root)
+    {
+        if (!is_valid_partition_number(index)) {
+            return NULL;
+        }
+        if (partitions[index]) {
+            if (root) {
+                return partitions[index]->GetRootPath();
+            } else {
+                return partitions[index]->GetFullPath();
+            }
+        }
+        return NULL;
+    }
+
+    int GetTargetPartitionNumber(int index)
+    {
+        if (index < 1) {
+            index = currentPartition;
+        }
+        return index;
+    }
+
+    IecPartition *GetPartition(int index)
+    {
+        index = GetTargetPartitionNumber(index);
+        if (!is_valid_partition_number(index)) {
+            return NULL;
+        }
+        return partitions[index];
+    }
+
+    void SetCurrentPartition(int pn)
+    {
+        if (is_valid_partition_number(pn)) {
+            currentPartition = pn;
+        }
+    }
+
+    int CountPartitions(void) {
+        int count = 0;
+        for(int i=1;i<MAX_PARTITIONS; i++) {
+            if (partitions[i]) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    int GetUnusedPartition(void) {
+        for(int i=1;i<MAX_PARTITIONS; i++) {
+            if (!partitions[i]) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    FRESULT SavePartitions(const char *path, const char *filename);
+    FRESULT LoadPartitions(const char *path, const char *name);
+    void LoadPartitions(File *fi);
+};
+
+typedef struct {
+    uint8_t bufdata[512];
+    uint32_t valid_bytes;
+} bufblk_t;
+
+class IecChannel {
+    IecDrive *drive;
+    FileManager *fm;
+
+    int channel;
+    bufblk_t bufblk[2];
+    bool pingpong;
+    bufblk_t *curblk;
+    bufblk_t *nxtblk;
+    uint8_t *buffer; // for legacy (to be refactored)
+
+    t_channel_state state;
+    int pointer;
+    int prefetch;
+    int prefetch_max;
+    int last_byte;
+
+    open_t name_to_open;
+    File *f;
+    Directory *dir;
+    fileaccess_t filemode;
+    uint32_t dir_free;
+    int part_idx;
+
+    uint32_t recordOffset;
+    uint8_t recordSize;
+    // The bytes in front of the data of the open file: an x00 header, or the record length
+    // of a relative file in one of its layouts (SI-084).
+    uint32_t dataOffset;
+    bool recordDirty;
+    // The record at recordOffset is past the end of the file (SI-080).
+    bool recordMissing;
+
+    // A direct access channel (#): the partition that was current when it was opened, which
+    // its block commands use (SI-093).
+    int buffer_partition;
+
+    // The directory a listing reads, which x00 names are probed in (SI-144).
+    mstring dir_path;
+
+    // temporaries
+    uint8_t flags;
+    IecPartition *partition;
+    char fs_filename[64];
+
+    // Set when a failure of this channel has been logged, so a channel that fails on every
+    // byte writes one line (see iec_log.h).
+    bool fault_logged;
+    bool drive_failed(void);
+    void log_line(const char *what, const uint8_t *payload, int len,
+                  const char *label, const uint8_t *extra, int extra_len);
+    void log_fault(const char *what);
+
+private:
+    int setup_partition_read();
+    int setup_directory_read();
+    int setup_file_access();
+    int setup_buffer_access(void);
+    int init_iec_transfer(void);
+
+    int open_file(void);  // name should be in buffer
+    int close_file(void); // file should be open
+    int read_dir_entry(void);
+    void swap_buffers(void);
+    int read_block(void);
+    t_channel_retval read_record(int offset);
+    t_channel_retval write_record(void);
+    void set_missing_record(void);
+    FRESULT grow_to_record(void);
+    t_channel_retval pop_record(void);
+
+    const char *ConstructPath(mstring& work, filename_t& name, filetype_t ftype, fileaccess_t acc);
+
+public:
+    IecChannel(IecDrive *dr, int ch);
+    virtual ~IecChannel();
+    virtual void reset(void);
+    virtual void talk(void)
+    {
+    }
+
+    void reset_prefetch(void);
+
+    t_channel_retval prefetch_data(uint8_t& data);
+    t_channel_retval prefetch_more(int, uint8_t*&, int &);
+    virtual t_channel_retval pop_data(void);
+    virtual t_channel_retval pop_more(int);
+    virtual t_channel_retval push_data(uint8_t b);
+    virtual t_channel_retval push_command(uint8_t b);
+
+    virtual int ext_open_file(const char *name);
+    virtual int ext_close_file(void);
+
+    int seek_record(int, int);
+    friend class IecCommandChannel;
+    friend class SoftIECTarget;
+};
+
+class IecCommandChannel: public IecChannel, public IecCommandExecuter {
+    IecParser *parser;
+    // CBMDOS_COMMAND_BUFFER_SIZE command bytes, plus the zero push_command writes after
+    // the last one.
+    uint8_t wr_buffer[CBMDOS_COMMAND_BUFFER_SIZE + 1];
+    int wr_pointer;
+
+    void mem_read(void);
+    void mem_write(void);
+    void get_error_string(void);
+
+    IecChannel *buffer_channel(int chan);
+    void sector_error(FRESULT fres, int track, int sector);
+    int do_block_read(int chan, int part, int track, int sector, bool length_byte);
+    int do_block_write(int chan, int part, int track, int sector, bool length_byte);
+    int do_block_allocate(int part, int track, int sector, bool alloc);
+    int do_buffer_position(int chan, int pos);
+    int do_set_current_partition(int part);
+    int do_change_dir(filename_t& dest);
+    int do_make_dir(filename_t& dest);
+    int do_remove_dir(filename_t& dest);
+    int do_copy(filename_t& dest, filename_t sources[], int n);
+    int do_initialize();
+    int do_initialize_buffers();
+    int do_reset(bool cold);
+    int do_format(filename_t& dest, const char *id);
+    int do_rename(filename_t &src, filename_t &dest);
+    int do_scratch(filename_t filenames[], int n);
+    int do_cmd_response(uint8_t *data, int len);
+    int do_set_position(int chan, uint32_t pos, int recnr, int recoffset);
+    int do_pwd_command();
+    int do_get_partition_info(int part);
+    int do_set_device_number(int dev);
+    int do_restore_device_number();
+    int do_set_write_protect(bool on);
+    int64_t get_clock_offset(void);
+    void set_clock_offset(int64_t seconds);
+    int do_toggle_attributes(filename_t& name, uint8_t bits);
+    int do_set_attributes(filename_t names[], int n, uint8_t attrib, uint8_t mask);
+    int do_set_header(filename_t& dest, const char *id);
+    int do_rename_partition(const char *newname, const char *oldname);
+public:
+    IecCommandChannel(IecDrive *dr, int ch);
+    virtual ~IecCommandChannel();
+    void set_error(int err = -1, int track = 0, int sector = 0);
+    void reset(void);
+    void talk(void);
+    t_channel_retval pop_data(void);
+    t_channel_retval pop_more(int);
+    t_channel_retval push_data(uint8_t b);
+    t_channel_retval push_command(uint8_t b);
+    int ext_open_file(const char *name);
+    int ext_close_file(void);
+};
+
+#endif /* IEC_CHANNEL_H */

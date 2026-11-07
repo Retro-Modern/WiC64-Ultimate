@@ -1,0 +1,153 @@
+#ifndef TREEBROWSER_H
+#define TREEBROWSER_H
+
+#include "userinterface.h"
+#include "browsable.h"
+#include "ui_elements.h"
+#include "observer.h"
+#include "filemanager.h"
+
+class TreeBrowserState;
+class ContextMenu;
+class ConfigBrowser;
+
+#define MAX_SEARCH_LEN_TB 32
+
+class ClipBoard
+{
+	mstring source_path;
+	IndexedList<mstring *> source_files;
+public:
+	ClipBoard() : source_path(""), source_files(8, NULL) { }
+
+	void reset(void) {
+		for(int i=0;i<source_files.get_elements();i++) {
+			delete source_files[i];
+		}
+		source_files.clear_list();
+	}
+	void setPath(const char *path) {
+		source_path = path;
+	}
+	const char *getPath(void) {
+		return source_path.c_str();
+	}
+	void addFile(const char *name) {
+		mstring *newf = new mstring(name);
+		source_files.append(newf);
+	}
+	int getNumberOfFiles(void) {
+		return source_files.get_elements();
+	}
+	const char *getFileNameByIndex(int index) {
+		mstring *s = source_files[index];
+		if(s)
+			return s->c_str();
+		return "";
+	}
+};
+
+class BrowsablePicker : public Browsable
+{
+    const char *message;
+    int entry_type;
+public:
+    BrowsablePicker(const char *display_string, int et) : Browsable(true), message(display_string), entry_type(et)
+    {
+    }
+    virtual ~BrowsablePicker() { }
+
+    const char *getName() { return message; }
+    void getDisplayString(char *buffer, int width, UserInterface *ui) {
+        int len = strlen(message);
+        if (len > width) {
+            len = width;
+        }
+        int offs = 0;
+        sprintf(buffer, "%#s%#s", offs, "", len, message);
+    }
+    // Abuse of the sort order function for header items. I could have used another function,
+    // but hey, it's an embedded system, and it does somehow work; negative values could be always on top.
+    int  getSortOrder(void) { return entry_type; }
+#define ET_PICKER -2
+};
+
+class TreeBrowser : public UIObject
+{
+	void tasklist(void);
+    void seek_char(int c);
+    void cd_impl(const char *path);
+public:
+    enum PickMode { PICK_NONE = 0, PICK_LOAD = 1, PICK_SAVE = 2, PICK_PATH = 3 };
+
+    char quick_seek_string[MAX_SEARCH_LEN_TB];
+    int  quick_seek_length;
+    bool allow_exit;
+    bool allow_tasks;
+    bool has_path;
+    bool has_border;
+    bool use_ui_focus_stack;
+    PickMode pick_mode;
+    bool     picked;
+    mstring  picked_path;
+    mstring  picked_name;
+    const char *title;
+
+    FileManager *fm;
+    UserInterface *user_interface;
+    ObserverQueue *observerQueue;
+    Browsable *root;
+    Screen   *screen;
+    Window   *window;
+    Keyboard *keyb;
+    Path 	 *path;
+
+    TreeBrowserState *state_root;
+    TreeBrowserState *state;
+
+    // link to temporary popup
+    ContextMenu *contextMenu; // anchor for menu that pops up
+
+    // Member functions
+    TreeBrowser(UserInterface *ui, Browsable *);
+    virtual ~TreeBrowser();
+
+    virtual void init();
+    virtual void redraw(void);
+    virtual void deinit(void);
+
+    // For a subclass whose root screen is not a plain TreeBrowserState. The
+    // constructor here has already made one by then, and it has to go: it is
+    // what state_root still points at otherwise, so cd() would compare state
+    // against a state the browser can never be in.
+    void replace_root_state(TreeBrowserState *s);
+
+    virtual int poll(int);
+    virtual int poll_inactive(void);
+    virtual int handle_key(int);
+    virtual void checkFileManagerEvent(void);
+
+    void send_keystroke(int key) { if (keyb) keyb->push_head(key); }
+    void reset_quick_seek(void);
+    bool perform_quick_seek(void);
+    
+    void context(int);
+    void task_menu(void);
+    void config(void);
+    void test_editor(void);
+    void copy_selection(void);
+    void delete_selected(void);
+    void paste(void);
+    void cd(const char *path);
+    
+    void prepend_headers();
+    bool can_pick(Browsable *entry);
+    int  pick_current(void);
+    void pick_result(const char *path, const char *name, bool dir_only);
+    
+    void invalidate(const void *obj);
+    const char *getPath();
+};
+
+int pick_path(UserInterface *intf, mstring& path);
+#endif

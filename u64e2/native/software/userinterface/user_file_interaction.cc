@@ -1,0 +1,536 @@
+/*
+ * user_file_interaction.cpp
+ *
+ *  Created on: Apr 25, 2015
+ *      Author: Gideon
+ */
+
+#include "user_file_interaction.h"
+#include "userinterface.h"
+#include "c1541.h"
+
+#include "c64.h"
+
+#include "home_directory.h"
+#include "x00_wrapper.h"
+#include "pattern.h"
+#include "subsys.h"
+#include "editor.h"
+
+#define MAX_FILE_SIZE_TO_VIEW 262144
+
+// Require a canonical round trip for newly stored names, including their file type.
+static bool stores_cbm_name(const char *host, bool dir, const char *pet)
+{
+    FileInfo info(host);
+    info.attrib = dir ? AM_DIR : 0;
+    char back[17];
+    return info.get_cbm_name(back) && !strcmp(back, pet);
+}
+
+class FileRenameAction : public Action
+{
+    BrowsableDirEntry *entry;
+public:
+    FileRenameAction(BrowsableDirEntry *entry) : Action("Rename", UserFileInteraction::S_rename, 0), entry(entry) { }
+    const char *getDisplayName(UserInterface *ui)
+    {
+        FileInfo *info = entry->getFileInfo();
+        char pet[17];
+        bool editable = entry->hasCbmName();
+        if (editable && (info->name_format & NAME_FORMAT_CBM)) {
+            editable = info->get_cbm_name(pet) && stores_cbm_name(entry->getName(), info->is_directory(), pet);
+        }
+        return (ui->cbm_names && editable) ? "Rename PETSCII name" : getName();
+    }
+};
+
+// member
+int UserFileInteraction::fetch_context_items(BrowsableDirEntry *br, IndexedList<Action *> &list)
+{
+    int count = 0;
+    if (!br)
+        return 0;
+
+    FileInfo *info = br->getInfo();
+    if (!info) {
+        printf("No FileInfo structure. Cannot create context menu.\n");
+        return 0;
+    }
+    if (info->attrib & AM_DIR) {
+        list.append(new Action("Enter", UserFileInteraction::S_enter, 0));
+        count++;
+    }
+    if ((info->size <= MAX_FILE_SIZE_TO_VIEW) && (!(info->attrib & (AM_DIR | AM_VOL)))) {
+        list.append(new Action("View", UserFileInteraction::S_view, 0));
+        list.append(new Action("Hex View", UserFileInteraction::S_hex_view, 0));
+        count += 2;
+    }
+#ifndef RECOVERYAPP
+    if (!(info->attrib & AM_VOL)) {
+        list.append(new Action("Copy to...", UserFileInteraction::S_copyTo, 0));
+        count++;
+        if (info->is_writable()) {
+            list.append(new Action("Move to...", UserFileInteraction::S_moveTo, 0));
+            count++;
+        }
+    }
+#endif
+    if (info->is_writable() && !(info->attrib & AM_VOL)) {
+        list.append(new FileRenameAction(br));
+        list.append(new Action("Delete", UserFileInteraction::S_delete, 0));
+        count += 2;
+    }
+
+    bool showRunWithApp = false;
+#ifndef RECOVERYAPP
+    const char* app_directory = "/Flash/apps";
+    char appname[100];
+    strcpy(appname, info->extension);
+    strcat(appname, ".prg");
+
+    FileManager *fm = FileManager::getFileManager();
+    File *file = 0;
+    FRESULT fres = fm->fopen(app_directory, appname, FA_READ, &file);
+    if (file) {
+        fm->fclose(file);
+        showRunWithApp = true;
+    }
+#endif
+
+    if ((info->size <= 16 * 1024 * 1024 - 4) && (!(info->attrib & AM_DIR)) && showRunWithApp) {
+        list.append(new Action("Run with App", UserFileInteraction::S_runApp, 0));
+        count++;
+    }
+    return count;
+}
+
+void UserFileInteraction :: create_task_items(void)
+{
+    TaskCategory *cat = TasksCollection :: getCategory("Create", SORT_ORDER_CREATE);
+    mkdir = new Action("Directory", UserFileInteraction::S_createDir, 0);
+    cat->append(mkdir);
+}
+
+void UserFileInteraction::update_task_items(bool writablePath)
+{
+    if (writablePath) {
+        mkdir->enable();
+    } else {
+        mkdir->disable();
+    }
+}
+
+SubsysResultCode_e UserFileInteraction::S_enter(SubsysCommand *cmd)
+{
+    if (cmd->user_interface) {
+        cmd->user_interface->send_keystroke(KEY_RIGHT);
+        return SSRET_OK; // FIXME
+    }
+    return SSRET_NO_USER_INTERFACE;
+}
+
+// Edit the decoded filename or x00 header with reversible text, preserving the file type.
+// An empty buffer means no change; false selects the existing stored-name editor.
+static bool edit_cbm_name(SubsysCommand *cmd, Path *p, const char *header, char *buffer, int len, char *pet)
+{
+    char shown[4 * 17 + 1];
+    char host[64];
+    const char *ext = "";
+    bool dir = false;
+
+    if (header) {
+        strcpy(pet, header);
+    } else {
+        FileInfo info(INFO_SIZE);
+        if ((FileManager::getFileManager()->fstat(p, cmd->filename.c_str(), info) != FR_OK) ||
+            !info.get_cbm_name(pet, false)) {
+            return false;
+        }
+        dir = info.is_directory();
+        if ((info.name_format & NAME_FORMAT_CBM) && !stores_cbm_name(cmd->filename.c_str(), dir, pet)) {
+            return false; // a type the host name cannot carry, such as DEL inside a disk image
+        }
+        CbmFileName cbm;
+        if (!dir) {
+            cbm.init(cmd->filename.c_str());
+            if (cbm.hadExtension()) {
+                char type[4];
+                ext = cmd->filename.c_str() + get_extension(cmd->filename.c_str(), type);
+            }
+        }
+    }
+    petscii_to_text(pet, shown, sizeof(shown));
+    strcpy(buffer, shown);
+    if ((cmd->user_interface->string_box("New PETSCII name..", buffer, len - 1) <= 0) ||
+        !*buffer || !strcmp(buffer, shown)) {
+        *buffer = 0;
+        return true;
+    }
+    // The new name has to read back as typed: the drive drops trailing shifted spaces, and
+    // a header name ends at its first shifted space or control code.
+    bool stored = (text_to_petscii(buffer, pet, 17) > 0);
+    if (stored && header) {
+        char back[17];
+        strcpy(back, pet);
+        stored = (x00_shown_name(back) == (int)strlen(pet));
+    } else if (stored) {
+        petscii_to_fat(pet, host, sizeof(host));
+        strcpy(buffer, host);
+        strcat(buffer, ext);
+        stored = stores_cbm_name(buffer, dir, pet);
+    }
+    if (!stored) {
+        cmd->user_interface->popup("Invalid PETSCII name: use {XX}", BUTTON_OK);
+        *buffer = 0;
+    }
+    return true;
+}
+
+SubsysResultCode_e UserFileInteraction::S_rename(SubsysCommand *cmd)
+{
+    int res;
+    char buffer[64];
+    FRESULT fres;
+
+    FileManager *fm = FileManager::getFileManager();
+
+    Path *p = fm->get_new_path("S_rename");
+    p->cd(cmd->path.c_str());
+
+    // An x00 file is renamed under the name it carries, which is the name the row shows
+    // and the name the drive lists; the host file follows it (SI-144c).
+    mstring full(cmd->path.c_str());
+    if (full[-1] != '/') {
+        full += "/";
+    }
+    full += cmd->filename.c_str();
+    char header[17];
+    bool wrapped = x00_read_header(fm, full.c_str(), header, NULL) && x00_shown_name(header);
+    char petscii[17];
+    bool as_cbm = cmd->user_interface->cbm_names &&
+                  edit_cbm_name(cmd, p, wrapped ? header : NULL, buffer, sizeof(buffer), petscii);
+    if (as_cbm) {
+        res = 1;
+    } else {
+        if (wrapped) {
+            petscii_to_fat(header, buffer, sizeof(buffer));
+        } else {
+            strncpy(buffer, cmd->filename.c_str(), 64);
+            buffer[63] = 0;
+        }
+        res = cmd->user_interface->string_box("Give a new name..", buffer, 63);
+    }
+    if ((res > 0) && (*buffer)) {
+        if (wrapped) {
+            mstring renamed;
+            if (!as_cbm) {
+                fat_to_petscii(buffer, false, petscii, 16, true);
+            }
+            fres = x00_rename(fm, full.c_str(), cmd->path.c_str(), petscii, &renamed);
+            // A new name that renders to the host name the file already has changes the
+            // header alone, which no rename reports, so the listing is asked to refresh.
+            if ((fres == FR_OK) && !strcmp(renamed.c_str(), full.c_str())) {
+                fm->sendEventToObservers(eRefreshDirectory, cmd->path.c_str(), "");
+            }
+        } else {
+            fres = fm->rename(p, cmd->filename.c_str(), buffer);
+        }
+        if (fres != FR_OK) {
+            sprintf(buffer, "Error: %s", FileSystem::get_error_string(fres));
+            cmd->user_interface->popup(buffer, BUTTON_OK);
+        }
+    }
+    fm->release_path(p);
+    return SSRET_OK;
+}
+
+SubsysResultCode_e UserFileInteraction::S_delete(SubsysCommand *cmd)
+{
+    char buffer[64];
+    FileManager *fm = FileManager::getFileManager();
+    int res = cmd->user_interface->popup("Are you sure?", BUTTON_YES | BUTTON_NO);
+    Path *p = fm->get_new_path("S_delete");
+    p->cd(cmd->path.c_str());
+    if (res == BUTTON_YES) {
+        FRESULT fres = FileManager::getFileManager()->delete_recursive(p, cmd->filename.c_str());
+        if (fres != FR_OK) {
+            sprintf(buffer, "Error: %s", FileSystem::get_error_string(fres));
+            cmd->user_interface->popup(buffer, BUTTON_OK);
+        }
+    }
+    fm->release_path(p);
+    return SSRET_OK;
+}
+
+static SubsysResultCode_e view_file(SubsysCommand *cmd, EditorType editor_type)
+{
+    FileManager *fm = FileManager::getFileManager();
+    File *f = 0;
+    FRESULT fres = fm->fopen(cmd->path.c_str(), cmd->filename.c_str(), FA_READ, &f);
+    uint32_t transferred = 0;
+    if ((fres == FR_OK) && (f != NULL)) {
+        uint32_t size = f->get_size();
+        char *text_buf = new char[size + 1];
+        fres = f->read(text_buf, size, &transferred);
+        printf("Res = %d. Read text buffer: %d bytes. File size: %d bytes\n", fres, transferred, size);
+        if (transferred > size) {
+            transferred = size;
+        }
+        if (fres == FR_OK) {
+            text_buf[transferred] = 0;
+            switch (editor_type) {
+                case HEX_EDITOR:
+                    cmd->user_interface->run_hex_editor(text_buf, transferred);
+                    break;
+                default:
+                    cmd->user_interface->run_editor(text_buf, transferred);
+                    break;
+            }
+        }
+        delete[] text_buf;
+        fm->fclose(f);
+    }
+    return SSRET_OK;
+}
+
+SubsysResultCode_e UserFileInteraction::S_view(SubsysCommand *cmd)
+{
+    return view_file(cmd, TEXT_EDITOR);
+}
+
+SubsysResultCode_e UserFileInteraction::S_hex_view(SubsysCommand *cmd)
+{
+    return view_file(cmd, HEX_EDITOR);
+}
+
+SubsysResultCode_e UserFileInteraction::S_createDir(SubsysCommand *cmd)
+{
+    char buffer[64];
+    buffer[0] = 0;
+
+    FileManager *fm = FileManager::getFileManager();
+    Path *path = fm->get_new_path("createDir");
+    path->cd(cmd->path.c_str());
+
+    int res = cmd->user_interface->string_box("Give name for new directory..", buffer, 32);
+    if ((res > 0) && (*buffer)) {
+        FRESULT fres = fm->create_dir(path, buffer);
+        if (fres != FR_OK) {
+            sprintf(buffer, "Error: %s", FileSystem::get_error_string(fres));
+            cmd->user_interface->popup(buffer, BUTTON_OK);
+        }
+    }
+    fm->release_path(path);
+    return SSRET_OK;
+}
+
+SubsysResultCode_e UserFileInteraction::S_runApp(SubsysCommand *cmd)
+{
+#ifndef RECOVERYAPP
+    printf("REU Select: %4x\n", cmd->functionID);
+    File *file = 0;
+    uint32_t bytes_read;
+    bool progress;
+    int sectors;
+    int secs_per_step;
+    int bytes_per_step;
+    uint32_t total_bytes_read;
+    int remain;
+
+    static char buffer[48];
+    uint8_t *dest;
+    FileManager *fm = FileManager::getFileManager();
+    FileInfo info(32);
+    fm->fstat(cmd->path.c_str(), cmd->filename.c_str(), info);
+
+    sectors = (info.size >> 9);
+    if (sectors >= 128)
+        progress = true;
+    secs_per_step = (sectors + 31) >> 5;
+    bytes_per_step = secs_per_step << 9;
+    remain = info.size;
+
+    printf("REU Load.. %s\nUI = %p", cmd->filename.c_str(), cmd->user_interface);
+    if (!cmd->user_interface)
+        progress = false;
+
+    FRESULT fres = fm->fopen(cmd->path.c_str(), cmd->filename.c_str(), FA_READ, &file);
+    if (file) {
+        total_bytes_read = 0;
+        // load file in REU memory
+        if (progress) {
+            cmd->user_interface->show_progress("Loading REU file..", 32);
+            dest = (uint8_t *) (REU_MEMORY_BASE + 4);
+            while (remain > 0) {
+                file->read(dest, bytes_per_step, &bytes_read);
+                total_bytes_read += bytes_read;
+                cmd->user_interface->update_progress(NULL, 1);
+                remain -= bytes_per_step;
+                dest += bytes_per_step;
+            }
+            cmd->user_interface->hide_progress();
+        } else {
+            file->read((void *) (REU_MEMORY_BASE + 4), (REU_MAX_SIZE - 4), &bytes_read);
+            total_bytes_read += bytes_read;
+        }
+        printf("\nClosing file. ");
+        fm->fclose(file);
+        file = NULL;
+        printf("done.\n");
+        *(uint8_t *) (REU_MEMORY_BASE) = total_bytes_read & 0xff;
+        *(uint8_t *) (REU_MEMORY_BASE + 1) = (total_bytes_read >> 8) & 0xff;
+        *(uint8_t *) (REU_MEMORY_BASE + 2) = (total_bytes_read >> 16) & 0xff;
+        *(uint8_t *) (REU_MEMORY_BASE + 3) = (total_bytes_read >> 24) & 0xff;
+
+        char appname[100];
+        char filen[100];
+        strcpy(filen, cmd->filename.c_str());
+        char* extension = filen;
+        char* tmp = filen;
+        while (*tmp) {
+            if (*tmp == '.')
+                extension = tmp + 1;
+            tmp++;
+        }
+        extension[3] = 0;
+
+        strcpy(appname, extension);
+        strcat(appname, ".prg");
+
+        // sprintf(buffer, "Bytes loaded: %d ($%8x)", total_bytes_read, total_bytes_read);
+        // cmd->user_interface->popup(buffer, BUTTON_OK);
+
+        const char* app_directory = "/Flash/apps"; // HomeDirectory::getHomeDirectory(); // cmd->user_interface->cfg->get_string(CFG_USERIF_HOME_DIR);
+        SubsysCommand* c64_command = new SubsysCommand(cmd->user_interface, SUBSYSID_C64, C64_DMA_LOAD, RUNCODE_DMALOAD_RUN,
+                app_directory, appname);
+        c64_command->execute();
+    } else {
+        printf("Error opening file.\n");
+        cmd->user_interface->popup(FileSystem::get_error_string(fres), BUTTON_OK);
+        return SSRET_DISK_ERROR;
+    }
+#endif
+    return SSRET_OK;
+}
+
+SubsysResultCode_e UserFileInteraction::S_copyTo(SubsysCommand *cmd)
+{
+    mstring hmm;
+    int ret = pick_path(cmd->user_interface, hmm);
+    if (!ret) {
+        return SSRET_ABORTED_BY_USER;
+    }
+
+    FileManager *fm = FileManager::getFileManager();
+    char buffer[80];
+    FRESULT fres = fm->fcopy(cmd->path.c_str(), cmd->filename.c_str(), hmm.c_str(), cmd->filename.c_str(), false);
+    if (fres == FR_EXIST) {
+        if (cmd->user_interface->popup("File exists. Overwrite?", BUTTON_YES | BUTTON_NO) == BUTTON_YES) {
+            fres = fm->fcopy(cmd->path.c_str(), cmd->filename.c_str(), hmm.c_str(), cmd->filename.c_str(), true);
+        } else {
+            return SSRET_OK;
+        }
+    }
+    if (fres != FR_OK) {
+        sprintf(buffer, "Copy error: %s", FileSystem::get_error_string(fres));
+        cmd->user_interface->popup(buffer, BUTTON_OK);
+        return SSRET_DISK_ERROR;
+    }
+    cmd->user_interface->popup("Copy complete.", BUTTON_OK);
+    return SSRET_OK;
+}
+
+SubsysResultCode_e UserFileInteraction::S_moveTo(SubsysCommand *cmd)
+{
+    mstring hmm;
+    int ret = pick_path(cmd->user_interface, hmm);
+    if (!ret) {
+        return SSRET_ABORTED_BY_USER;
+    }
+
+    FileManager *fm = FileManager::getFileManager();
+    char buffer[80];
+
+    // Try rename first (same filesystem = instant move)
+    Path *src = fm->get_new_path("move_src");
+    src->cd(cmd->path.c_str());
+    Path *dst = fm->get_new_path("move_dst");
+    dst->cd(hmm.c_str());
+    FRESULT fres = fm->rename(src, cmd->filename.c_str(), dst, cmd->filename.c_str());
+
+    if (fres == FR_INVALID_DRIVE) {
+        // Cross-filesystem: copy + delete
+        fres = fm->fcopy(cmd->path.c_str(), cmd->filename.c_str(), hmm.c_str(), cmd->filename.c_str(), false);
+        if (fres == FR_EXIST) {
+            if (cmd->user_interface->popup("File exists. Overwrite?", BUTTON_YES | BUTTON_NO) == BUTTON_YES) {
+                fres = fm->fcopy(cmd->path.c_str(), cmd->filename.c_str(), hmm.c_str(), cmd->filename.c_str(), true);
+            }
+        }
+        if (fres == FR_OK) {
+            Path *del_path = fm->get_new_path("move_del");
+            del_path->cd(cmd->path.c_str());
+            fres = fm->delete_recursive(del_path, cmd->filename.c_str());
+            fm->release_path(del_path);
+        }
+    }
+
+    fm->release_path(src);
+    fm->release_path(dst);
+
+    if (fres != FR_OK) {
+        sprintf(buffer, "Move error: %s", FileSystem::get_error_string(fres));
+        cmd->user_interface->popup(buffer, BUTTON_OK);
+        return SSRET_DISK_ERROR;
+    }
+    cmd->user_interface->popup("Move complete.", BUTTON_OK);
+    return SSRET_OK;
+}
+
+// TODO: Use these functions in other user-interface based subsystem calls
+FRESULT create_file_ask_if_exists(FileManager *fm, UserInterface *ui, const char *path, const char *filename, File **f)
+{
+    FRESULT res = fm->fopen(path, filename, FA_WRITE | FA_CREATE_NEW | FA_CREATE_ALWAYS, f);
+    if (res == FR_EXIST) {
+        if (ui->popup("File already exists. Overwrite?", BUTTON_YES | BUTTON_NO) == BUTTON_YES) {
+            res = fm->fopen(path, filename, FA_WRITE | FA_CREATE_ALWAYS, f);
+        }
+    }
+    return res;
+}
+
+FRESULT create_user_file(UserInterface *ui, const char *message, const char *ext, const char *path, File **f, char *buffer)
+{
+    char filename[32];
+    FileManager *fm = FileManager :: getFileManager();
+    *f = NULL;
+    if ((ui->string_box(message, buffer, 22) > 0) && (*buffer)) {
+        strcpy(filename, buffer);
+        fix_filename(filename);
+        set_extension(filename, ext, 32);
+        FRESULT res = create_file_ask_if_exists(fm, ui, path, filename, f);
+        return res;
+    }
+    return FR_DENIED;
+}
+
+FRESULT write_zeros(File *f, int size, uint32_t &written)
+{
+    uint8_t *buffer = new uint8_t[16384];
+    written = 0;
+    uint32_t wr;
+    memset(buffer, 0, 16384);
+    FRESULT fres = FR_OK;
+    while(size > 0) {
+        int now = (size > 16384) ? 16384 : size;
+        fres = f->write(buffer, now, &wr);
+        written += wr;
+        size -= wr;
+        if (fres != FR_OK) {
+            break;
+        }
+    }
+    delete[] buffer;
+    return fres;
+}
+

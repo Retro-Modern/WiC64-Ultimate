@@ -1,0 +1,43 @@
+/*
+ * host_stream.h
+ *
+ *  Created on: May 20, 2015
+ *      Author: Gideon
+ */
+
+#ifndef IO_STREAM_HOST_STREAM_H_
+#define IO_STREAM_HOST_STREAM_H_
+
+#include "host.h"
+#include "stream.h"
+
+class HostStream: public GenericHost {
+	Stream *stream;
+	Screen *screen;
+	Keyboard *keyboard;
+public:
+	HostStream(Stream *str) {
+		screen = 0;
+		keyboard = 0;
+		stream = str;
+	}
+
+	virtual ~HostStream() {
+		if (keyboard) {
+			delete keyboard;
+		}
+		if (screen) {
+			delete screen;
+		}
+	}
+
+	bool exists(void) { return stream && stream->is_alive(); }
+	bool is_accessible(void) { return stream && stream->is_alive(); }
+
+    Screen   *getScreen(void);
+    Keyboard *getKeyboard(void);
+
+    void release_ownership(void);
+};
+
+#endif /* IO_STREAM_HOST_STREAM_H_ */

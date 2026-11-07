@@ -1,0 +1,680 @@
+#include "pattern.h"
+#include <string.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <cctype>
+/*
+-------------------------------------------------------------------------------
+							pattern_match
+							=============
+  Abstract:
+
+	Sees if the find string can be matched to a fixed string. Supports
+	wildcards * and ?.
+
+-------------------------------------------------------------------------------
+*/
+
+static bool hex2bin(char c, uint8_t& out)
+{
+    if ((c >= '0') && (c <= '9')) {
+        out = (uint8_t)(c - '0');
+        return true;
+    }
+    if ((c >= 'A') && (c <= 'F')) {
+        out = (uint8_t)(c - 'A') + 10;
+        return true;
+    }
+    if ((c >= 'a') && (c <= 'f')) {
+        out = (uint8_t)(c - 'a') + 10;
+        return true;
+    }
+    return false;
+}
+
+static char get_escaped_char(const char *&p, bool &escape)
+{
+    char ret;
+    while(true) {
+        if (!(*p))
+            return 0;
+
+        if (escape) {
+            if (*p == '}') {
+                escape = false;
+                p++;
+                continue;
+            }
+            char h = p[0];
+            char l = p[1];
+            if (!h || !l) {
+                ret = 0;
+                break;
+            }
+            uint8_t hb, lb;
+            if (!hex2bin(h, hb) || !hex2bin(l, lb)) {
+                escape = false;
+                ret = '{';
+                break;
+            } else {
+                ret = (hb << 4) | lb;
+                p += 2;
+                break;
+            }
+        } else {
+            if (*p == '{') {
+                escape = true;
+                p++;
+            } else {
+                ret = *p;
+                p++;
+                break;
+            }
+        }
+    }
+    return ret;
+}
+
+// * matches any run of characters, including none, and ? any one character. The last *
+// takes one more character each time the rest of the pattern fails, which takes time
+// proportional to the product of the two lengths; the recursion this replaces took time
+// exponential in the number of stars, which one command from the IEC bus can send. The
+// recursion also matched a fixed string that ended where the pattern had a *, whatever
+// followed it, so S:FOO*X scratched FOO.
+bool pattern_match(const char *pattern, const char *fixed, bool case_sensitive)
+{
+    const char *p = pattern;
+    const char *f = fixed;
+    const char *star_p = NULL; // the pattern after the last *
+    const char *star_f = NULL; // where in the fixed string that was last tried
+    char cp, cf;
+
+    while(true) {
+        if(!(*f)) { // end of fixed string: what is left of the pattern may only be stars
+            while(*p == '*')
+                p++;
+            if(!(*p))
+                return true;
+        } else if(*p == '*') {
+            p++; // skip the * and set pointer to next character
+            if(!(*p)) // end of our pattern, so we have a match
+                return true;
+            star_p = p;
+            star_f = f;
+            continue;
+        } else {
+            if(*p == '?') {
+                cp = cf = 0; // assume equality
+            } else if(!case_sensitive) {
+                cp = toupper(*p);
+                cf = toupper(*f);
+            } else {
+                cp = *p;
+                cf = *f;
+            }
+            if(cf == cp) {
+                f++;
+                p++;
+                continue;
+            }
+        }
+        // No match from here: let the last * take one more character of the fixed string.
+        if(!star_p || !(*star_f))
+            return false;
+        star_f++;
+        p = star_p;
+        f = star_f;
+    }
+}
+
+bool pattern_match_escaped(const char *pattern, const char *fixed, bool case_sensitive, bool p_esc, bool f_esc)
+{
+    const char *p;
+    const char *f;
+    const char *prev_f;
+    char cp, cf, rp;
+
+    p = pattern;
+    f = fixed;
+    do {
+        rp = *p;
+        prev_f = f;
+        cf = get_escaped_char(f, f_esc);
+        cp = get_escaped_char(p, p_esc);
+
+        if(!cp) { // end of pattern
+            return (cf == '\0'); // if the fixed is also at the end, we have a match,
+                                 // if not, then our pattern is too short and we don't match
+        }
+        if(!cf) { // end of fixed string
+            if(rp == '*') // check special case foo* == foo.
+                return true;
+            else
+                return false; // our pattern string was longer
+        }
+        if(rp == '*') {
+            if(!(*p)) // end of our pattern, so we have a match
+                return true;
+
+            // now, recurse and try to find the pattern AFTER the * in the fixed string
+            // first reset F, as we should not consume the char under the *
+            f = prev_f;
+            while(cf) {
+                printf("Recursive match: %s %s\n", p, f);
+                bool match = pattern_match_escaped(p, f, case_sensitive, p_esc, f_esc);
+                if(match)
+                    return true;
+                cf = get_escaped_char(f, f_esc);
+            }
+            return false;
+        } else if(rp == '?') {
+            // assume equality; continue
+        } else {
+            if(!case_sensitive) {
+                cp = toupper(cp);
+                cf = toupper(cf);
+            }
+            if(cf != cp)
+                return false; // two character inequal
+        }
+    } while(true);
+
+    return false; // never gets here.
+}
+
+int split_string(char sep, char *s, char **parts, int maxParts)
+{
+    int len = strlen(s);
+    int idx = 0;
+    parts[idx++] = s;
+    for(int i=0;(i<len) && (idx < maxParts);i++) {
+        if (s[i] == sep) {
+            s[i] = 0;
+            parts[idx++] = s + i + 1;
+        }
+    }
+    return idx;
+}
+
+bool isEmptyString(const char *c)
+{
+    if (!c)
+        return true;
+    if (strlen(c) == 0)
+        return true;
+    return false;
+}
+
+#ifdef TESTPTRN
+#include <stdio.h>
+
+int main()
+{
+    struct test_vector
+    {
+        bool case_sens;
+        const char *pattern;
+        const char *fixed;
+        bool expected;
+    };
+    
+    struct test_vector vectors[27] = {
+        { true, "", "", true },
+        { true, "*", "", true },
+        { true, "?", "", false },
+        { true, "?", "{88}", true },
+        { true, "g*n", "{676964656f6e}", true },
+        { true, "g*n", "{676964656f6e}", true },
+        { true, "g*n{7a}", "{676964656f6e7a}", true },
+        { true, "g{2a}n{7a}", "{676964656f6e7a}", false },
+        { true, "gideon", "gideon", true },
+        { true, "lili*", "liliana", true },
+        { true, "lili*", "lili", true },
+        { true, "lili*a", "liliena", true },
+        { true, "lili*a", "l{69}liana", true },
+        { true, "lili*a", "liliane", false },
+        { true, "lili*a", "liliana martinez", false },
+        { true, "lili*mar*", "liliana martinez", true },
+        { true, "lili*mar*ez", "liliana martinez", true },
+        { true, "lili*m?r*ez", "liliana mertinez", true },
+        { true, "lil?", "lili", true },
+        { true, "lil?", "lil", false },
+        { true, "lili", "gideon", false },
+        { true, "gideon", "lili", false },
+        { true, "lili", "lilian", false },
+        { false, "lil?", "LILI", true },
+        { false, "L{69}L?", "lili", true },
+        { true,  "LIL?", "lili", false },
+        { true,  "lilian", "lili", false } };
+
+        
+    int errors = 0;
+    for(int i=0;i<27;i++) {
+        bool test = pattern_match_escaped(vectors[i].pattern, vectors[i].fixed, vectors[i].case_sens);
+        if(test != vectors[i].expected) {
+            errors ++;
+            printf("Error! wrong result for: %s =? %s. Case = %d\n",
+                vectors[i].pattern, vectors[i].fixed, vectors[i].case_sens);
+        }
+    }
+    printf("Total number of errors: %d\n", errors);
+
+    const char *escaped = "Dit {69}s {}een t{657374}je. {yy}{123456abcdefghij}{";
+    char n;
+    const char *p = escaped;
+    bool esc = false;
+    while(n = get_escaped_char(p, esc)) {
+        printf("%02x: %c\n", n, n);
+    }
+
+    return errors;
+}
+
+#endif
+
+/* some handy functions */
+void set_extension(char *buffer, const char *ext, int buf_size)
+{
+    // try to remove the existing extension
+    int name_len = strlen(buffer);
+    for(int i=name_len-1;i>=0;i--) {
+        if(buffer[i] == '.') {
+            buffer[i] = 0;
+            break;
+        }
+    }
+
+    add_extension(buffer, ext, buf_size);
+}
+
+void add_extension(char *buffer, const char *ext, int buf_size)
+{
+    // skip leading dots of extension to set
+    while(*ext == '.') {
+        ext++;
+    }
+    int ext_len = strlen(ext) + 1; // +1 because of dot
+    if(buf_size < 1+ext_len)
+        return; // cant append, even to an empty base
+
+    if (!(*ext)) { // there is nothing to append
+        return;
+    }
+
+    int name_len = strlen(buffer);
+    if(name_len + ext_len + 1 > buf_size) {
+        buffer[buf_size-ext_len-1] = 0; // truncate to make space for extension!
+        name_len = buf_size-ext_len-1;
+    }
+    buffer[name_len++] = '.';
+    // strcat + tolower
+    while(*ext) {
+        buffer[name_len++] = tolower(*(ext++));
+    } buffer[name_len] = 0;
+}
+
+int fix_filename(char *buffer)
+{
+    const char illegal[] = "\"*:/<>\\?|,\x7F";
+    int illegal_count = strlen(illegal);
+    int len = strlen(buffer);
+
+    int replacements = 0;
+    for(int i=0;i<len;i++) {
+        for(int j=0;j<illegal_count;j++) {
+            if(buffer[i] == illegal[j]) {
+                buffer[i] = '_';
+                replacements ++;
+            }
+        }
+    }
+    return replacements;
+}
+
+int get_extension(const char *name, char *ext, bool caps)
+{
+    int len = strlen(name);
+    ext[0] = 0;
+
+    for (int i=len-1;i>=0;i--) {
+        if (name[i] == '.') { // last . found
+            len = i; // to return length of base name
+            for(int j=0;j<3;j++) { // copy max 3 chars
+                ext[j+1] = 0; // the char after the current is always end
+                if (!name[i+1+j])
+                    break;
+                if(caps) {
+                    ext[j] = toupper(name[i+1+j]);
+                } else {
+                    ext[j] = name[i+1+j];
+                }
+            }
+            break;
+        }
+    }
+    return len;
+}
+
+// Truncates the filename such that the resulting string will always fit in the
+// buffer, and the extension is copied, if at all possible.
+// Example, if bufsize is 32, then the maximum length of the string will be 31.
+// This means that if the length of the extension is 3, the base string will
+// be at most 27 chars.
+void truncate_filename(const char *orig, char *buf, int bufsize)
+{
+    buf[0] = 0;
+    if (bufsize < 5) {
+        return;
+    }
+    char ext[4];
+    get_extension(orig, ext);
+
+    strncpy(buf, orig, bufsize);
+    buf[bufsize-5] = 0;
+
+    set_extension(buf, ext, bufsize);
+}
+
+const char *get_filename(const char *path)
+{
+    int n = strlen(path);
+    while(n) {
+        if (path[n] == '/') {
+            return path + n + 1;
+        }
+        n--;
+    }
+    return path;
+}
+
+static const char *reserved_names[] = {
+    "CON", "PRN", "AUX", "NUL",
+    "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+    "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    NULL
+};
+
+void petscii_to_fat(const char *pet, char *fat, int maxlen)
+{
+    int match = 0, i;
+    for (i = 0; reserved_names[i] != NULL; i++) {
+        match = 1;
+        unsigned char *a = (unsigned char *)pet;
+        unsigned char *b = (unsigned char *)reserved_names[i];
+
+        while (match) {
+            unsigned char aa = *a;
+            unsigned char bb = *b;
+            if (!bb && aa == '.')
+                aa = 0;
+            if (aa != bb)
+                match = 0;
+            if (!aa)
+                break;
+            if (!bb)
+                break;
+            a++;
+            b++;
+        }
+
+        if (match)
+            break;
+    }
+    if (match) {
+        fat[0] = '{';
+        fat[1] = '}';
+        i = 2;
+    } else {
+        i = 0;
+    }
+
+    // clear output string
+    const char *hex = "0123456789ABCDEF";
+    bool first = true;
+    bool escape = false;
+
+    while (*pet) {
+        char p = *(pet++);
+        // A trailing run of shifted spaces is the padding of a CBM directory entry and is
+        // dropped; one inside a name is escaped like any other byte (SI-147). The compare
+        // is on the byte's value, so a signed char build does the same as an unsigned one,
+        // and the end is tested on the byte that stopped the run, not on the one after it.
+        if ((uint8_t)p == 160) {
+            const char *q = pet;
+            while ((uint8_t)*(q++) == 160)
+                ;
+            if (!*(q - 1))
+                break;
+        }
+        if ((p < 32) || (p >= 96) || (p == ':') || (p == '/') || (p == '\\') || (p == '*') || (p == '\x22') ||
+            (p == '<') || (p == '>') || (p == '?') || (first && p == '.')) { // '|' > 96 ;)
+
+            if ((i + 4) >= maxlen) {
+                break;
+            }
+            if (!escape) {
+                fat[i++] = '{';
+                escape = true;
+            }
+            fat[i++] = hex[((uint8_t)p) >> 4];
+            fat[i++] = hex[p & 15];
+        } else {
+            if ((i + 2) >= maxlen) {
+                break;
+            }
+            if (escape) {
+                fat[i++] = '}';
+                escape = false;
+            }
+            fat[i++] = p;
+        }
+        first = false;
+    }
+    if (escape) {
+        fat[i++] = '}';
+        escape = false;
+    }
+    fat[i] = 0;
+
+    if ((strlen(fat) > 3) && (i + 3 <= maxlen)) { // the braces and the terminator fit
+        char *ext = fat + strlen(fat) - 4;
+        if (!strcasecmp(ext, ".prg") || !strcasecmp(ext, ".seq") || !strcasecmp(ext, ".usr") || !strcasecmp(ext, ".rel")) {
+            strcat(fat, "{}");
+        }
+    }
+}
+
+void fat_to_petscii(const char *fat, bool cutExt, char *pet, int len, bool term)
+{
+    int i = 0, k = 0;
+    bool escape = false;
+    int max = strlen(fat);
+
+    if (cutExt) {
+        for(int j=max-1;j>=max-4;j--) {
+            if(fat[j] == '.') {
+                max = j;
+                break;
+            }
+        }
+    }
+
+    while(fat[k] && (k < max) && (i < len)) {
+        char f = fat[k];
+        if (f == '{') {
+            escape = true;
+            k++;
+        }
+        if (escape) {
+            char h = fat[k+0];
+            char l = h ? fat[k+1] : 0;
+            if (!h || !l) {
+                break;
+            }
+            uint8_t hb, lb;
+            if (!hex2bin(h, hb) || !hex2bin(l, lb)) {
+                escape = false;
+                // do not advance
+            } else {
+                pet[i++] = (hb << 4) | lb;
+                k += 2;
+            }
+        } else {
+            if (f == '}') {
+                escape = false;
+                k++;
+            } else {
+                pet[i++] = toupper(f);
+                k++;
+            }
+        }
+    }
+    if (term) {
+        pet[i] = 0;
+    }
+}
+
+// The character the lower/upper case set shows for a PETSCII byte, or 0 for a graphic, a
+// control code, the pound sign and the second code of each shifted letter, which no single
+// character of the menu font or keyboard gives back unambiguously.
+static char petscii_text_char(uint8_t p)
+{
+    if ((p >= 0x41) && (p <= 0x5A)) {
+        return (char)(p + 0x20);
+    }
+    if ((p >= 0xC1) && (p <= 0xDA)) {
+        return (char)(p - 0x80);
+    }
+    if ((p >= 0x20) && (p <= 0x5F) && (p != 0x5C)) {
+        return (char)p;
+    }
+    return 0;
+}
+
+bool petscii_to_text(const char *pet, char *text, int len, bool lossless)
+{
+    if (len <= 0) {
+        return false;
+    }
+    const char *hex = "0123456789ABCDEF";
+    bool escape = false;
+    int i = 0;
+
+    for (; *pet; pet++) {
+        if (i + 5 > len) { // three characters, a closing brace and the terminator
+            break;
+        }
+        uint8_t p = (uint8_t)*pet;
+        char c = petscii_text_char(p);
+        if (!lossless && (p >= 0x61) && (p <= 0x7A)) {
+            c = (char)(p - 0x20); // GEOS uses the duplicate uppercase letters.
+        }
+        if (c) {
+            if (escape) {
+                text[i++] = '}';
+                escape = false;
+            }
+            text[i++] = c;
+        } else {
+            if (!escape) {
+                text[i++] = '{';
+                escape = true;
+            }
+            text[i++] = hex[p >> 4];
+            text[i++] = hex[p & 15];
+        }
+    }
+    if (escape) {
+        text[i++] = '}';
+    }
+    text[i] = 0;
+    return !*pet;
+}
+
+int text_to_petscii(const char *text, char *pet, int len)
+{
+    if (len <= 0) {
+        return -1;
+    }
+    int i = 0;
+
+    while (*text) {
+        uint8_t p;
+        if (*text == '{') {
+            text++;
+            do {
+                uint8_t h, l;
+                if (!hex2bin(text[0], h) || !hex2bin(text[1], l)) {
+                    return -1;
+                }
+                p = (h << 4) | l;
+                if (!p || (i >= len - 1)) {
+                    return -1;
+                }
+                pet[i++] = (char)p;
+                text += 2;
+            } while (*text != '}');
+            text++;
+            continue;
+        }
+        uint8_t c = (uint8_t)*(text++);
+        if ((c >= 'a') && (c <= 'z')) {
+            p = c - 0x20;
+        } else if ((c >= 'A') && (c <= 'Z')) {
+            p = c + 0x80;
+        } else if (petscii_text_char(c) == (char)c) {
+            p = c;
+        } else {
+            return -1;
+        }
+        if (i >= len - 1) {
+            return -1;
+        }
+        pet[i++] = (char)p;
+    }
+    pet[i] = 0;
+    return i;
+}
+
+int read_line(const char *buffer, int index, char *out, int outlen)
+{
+    int i = 0;
+    // trim leading spaces and tabs
+    while ((buffer[index] == 0x20) || (buffer[index] == 0x09)) {
+        index ++;
+    }
+    while ((buffer[index] != 0x0A) && (buffer[index] != 0x00)) {
+        if (buffer[index] != 0x0D) {
+            if (i < (outlen-1)) {
+                out[i++] = buffer[index];
+            }
+        }
+        index++;
+    }
+    if ((buffer[index] == 0x0A) || (buffer[index] == 0x00)) {
+        index++;
+    }
+    out[i] = 0;
+    return index;
+}
+
+void url_encode(const char *src, mstring &dest)
+{
+    int len = strlen(src);
+    char pct[4] = {0};
+
+    for(int i=0; i<len; i++) {
+        if(src[i] == '_' || src[i] == '-' || src[i] == '.' || src[i] == '*') {
+            dest += src[i];
+        } else if(src[i] >= 'a' && src[i] <= 'z') {
+            dest += src[i];
+        } else if(src[i] >= 'A' && src[i] <= 'Z') {
+            dest += src[i];
+        } else if(src[i] >= '0' && src[i] <= '9') {
+            dest += src[i];
+        } else {
+            sprintf(pct, "%c%02x", '%', src[i]);
+            dest += pct;
+        }
+    }
+}

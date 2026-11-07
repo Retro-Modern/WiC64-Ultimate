@@ -1,0 +1,456 @@
+; RADIOTEST - fragt httpbin (zeigt User-Agent, %mac/%ser) und den Radio-Server route64 ab.
+; Zum Testen der WiC64-CFW von TheRealWanderer auf der U64 (01.11.2026).
+;
+; Ergebnisse je Test zusaetzlich ab $c000, 16 Byte pro Test:
+;   +0 Phase (0 ok, 1 Senden, 2 Warten auf Antwort, 3 Kopf, 4 Daten = Zeitueberschreitung)
+;   +1 Status  +2/3 Laenge  +4/5 empfangen  +6/7 Jiffies  +8..11 roher Kopf
+; $c0ff = Anzahl fertiger Tests.
+
+        .cpu "6502"
+
+CHROUT  = $ffd2
+LINPRT  = $bdcd         ; A = hi, X = lo
+PP      = $f7           ; Zeiger fuer Textausgabe
+UP      = $fb           ; Zeiger auf URL
+DST     = $fd           ; Zielzeiger im Puffer
+BUF     = $4000
+BUFMAX  = $40           ; hoechstens $4000 Byte puffern (bis $7fff)
+RES     = $c000
+NTESTS  = 2
+TMOSEK  = 60            ; Remote-Timeout in Sekunden
+        .weak
+MIT_TMO = 1             ; 0 = ohne $32 (Standard-Timeout der CFW pruefen)
+        .endweak
+
+        * = $0801
+        .word (+), 10
+        .null $9e, format("%d", start)
++       .word 0
+
+start   lda #0
+        sta RES+$ff
+        lda #14                 ; Kleinschrift
+        jsr CHROUT
+        lda #147
+        jsr CHROUT
+        lda #<s_titel
+        ldy #>s_titel
+        jsr prt
+        lda #0
+        sta testnr
+
+next    ldx testnr
+        lda urls_lo,x
+        sta UP
+        lda urls_hi,x
+        sta UP+1
+        jsr strlen
+        lda #13
+        jsr CHROUT
+        lda UP
+        ldy UP+1
+        jsr prt
+        lda #13
+        jsr CHROUT
+
+        ; Ergebnissatz leeren
+        lda testnr
+        asl
+        asl
+        asl
+        asl
+        sta resofs
+        tax
+        ldy #16
+        lda #0
+-       sta RES,x
+        inx
+        dey
+        bne -
+
+.if MIT_TMO
+        jsr settmo              ; Remote-Timeout gilt nur fuer den naechsten Befehl
+.endif
+        jsr jiffy
+        sta t0
+        stx t0+1
+
+        jsr request
+        bcs fehler
+        jsr receive
+        bcs fehler
+        lda #0
+        sta phase
+
+fehler  jsr jiffy               ; A = lo, X = hi
+        sec
+        sbc t0
+        sta dt
+        txa
+        sbc t0+1
+        sta dt+1
+
+        ldx resofs
+        lda phase
+        sta RES+0,x
+        lda status
+        sta RES+1,x
+        lda len
+        sta RES+2,x
+        lda len+1
+        sta RES+3,x
+        lda got
+        sta RES+4,x
+        lda got+1
+        sta RES+5,x
+        lda dt
+        sta RES+6,x
+        lda dt+1
+        sta RES+7,x
+        lda hdr
+        sta RES+8,x
+        lda hdr+1
+        sta RES+9,x
+        lda hdr+2
+        sta RES+10,x
+        lda hdr+3
+        sta RES+11,x
+
+        jsr zeige
+        inc RES+$ff
+        inc testnr
+        lda testnr
+        cmp #NTESTS
+        beq fertig
+        jmp next
+
+fertig  lda #13
+        jsr CHROUT
+        lda #<s_ende
+        ldy #>s_ende
+        jsr prt
+        rts
+
+; ---------------------------------------------------------------------
+; Ergebniszeile und Anfang des Rumpfs ausgeben
+zeige   lda phase
+        beq _ok
+        lda #<s_zeit
+        ldy #>s_zeit
+        jsr prt
+        lda #0
+        ldx phase
+        jsr LINPRT
+        lda #13
+        jsr CHROUT
+_ok     lda #<s_status
+        ldy #>s_status
+        jsr prt
+        lda #0
+        ldx status
+        jsr LINPRT
+        lda #<s_len
+        ldy #>s_len
+        jsr prt
+        lda len+1
+        ldx len
+        jsr LINPRT
+        lda #<s_jif
+        ldy #>s_jif
+        jsr prt
+        lda dt+1
+        ldx dt
+        jsr LINPRT
+        lda #<s_jif2
+        ldy #>s_jif2
+        jsr prt
+        ; die ersten 70 druckbaren Zeichen des Rumpfs
+        lda got+1
+        bne +
+        lda got
+        beq _raus
++       lda #<BUF
+        sta PP
+        lda #>BUF
+        sta PP+1
+        ldy #0
+        ldx #70
+_l      lda got+1               ; nicht ueber das Empfangene hinaus
+        bne +
+        cpy got
+        bcs _cr
++       lda (PP),y
+        cmp #10
+        beq _sp
+        cmp #13
+        beq _sp
+        jsr asc
+        jsr CHROUT
+        jmp _w
+_sp     lda #32
+        jsr CHROUT
+_w      iny
+        dex
+        bne _l
+_cr     lda #13
+        jsr CHROUT
+_raus   rts
+
+; ---------------------------------------------------------------------
+; Anfrage senden: 'R', $01 (HTTP GET), Laenge, URL
+request lda #1
+        sta phase
+        lda #$ff                ; Port B Ausgang
+        sta $dd03
+        lda $dd00               ; PA2 hoch = C64 sendet
+        ora #$04
+        sta $dd00
+        lda $dd0d               ; alte FLAG-Meldung loeschen
+        lda #"R"
+        jsr sendb
+        bcs _f
+        lda #$01
+        jsr sendb
+        bcs _f
+        lda ulen
+        jsr sendb
+        bcs _f
+        lda #0
+        jsr sendb
+        bcs _f
+        ldy #0
+-       lda (UP),y
+        sty ytmp
+        jsr sendb
+        bcs _f
+        ldy ytmp
+        iny
+        cpy ulen
+        bne -
+        clc
+_f      rts
+
+; Remote-Timeout setzen: 'R', $32, Laenge 1, Sekunden. Kopf landet in $c0f0..
+settmo  lda #$ff
+        sta $dd03
+        lda $dd00
+        ora #$04
+        sta $dd00
+        lda $dd0d
+        lda #"R"
+        jsr sendb
+        lda #$32
+        jsr sendb
+        lda #1
+        jsr sendb
+        lda #0
+        jsr sendb
+        lda #TMOSEK
+        jsr sendb
+        jsr receive
+        lda phase
+        sta RES+$f0
+        lda status
+        sta RES+$f1
+        lda len
+        sta RES+$f2
+        rts
+
+sendb   sta $dd01
+        lda #60
+        jmp warte
+
+; ---------------------------------------------------------------------
+; Antwort lesen
+receive lda #2
+        sta phase
+        lda #0
+        sta got
+        sta got+1
+        sta len
+        sta len+1
+        sta status
+        lda #$00                ; Port B Eingang
+        sta $dd03
+        lda $dd00               ; PA2 runter = C64 empfaengt
+        and #$fb
+        sta $dd00
+        lda #240                ; bis 64 s auf die Antwort warten (x16 unten)
+        jsr warte4
+        bcs _f
+        lda #3
+        sta phase
+        lda $dd01               ; Blindlesen, holt das erste Byte
+        sta hdr
+        jsr w1
+        bcs _f
+        lda $dd01
+        sta status
+        sta hdr+1
+        jsr w1
+        bcs _f
+        lda $dd01
+        sta len
+        sta hdr+2
+        jsr w1
+        bcs _f
+        lda $dd01
+        sta len+1
+        sta hdr+3
+        lda #4
+        sta phase
+        lda #<BUF
+        sta DST
+        lda #>BUF
+        sta DST+1
+_loop   lda got                 ; got == len ?
+        cmp len
+        bne +
+        lda got+1
+        cmp len+1
+        beq _ok
++       jsr w1
+        bcs _f
+        lda $dd01
+        ldy DST+1
+        cpy #(>BUF)+BUFMAX
+        bcs +
+        ldy #0
+        sta (DST),y
+        inc DST
+        bne +
+        inc DST+1
++       inc got
+        bne _loop
+        inc got+1
+        jmp _loop
+_ok     clc
+_f      rts
+
+w1      lda #60
+        jmp warte
+
+; warte4: Wartezeit A*16 Jiffies (fuer lange TLS-Antworten)
+warte4  sta zaehl
+-       lda #16
+        jsr warte
+        bcc _ok
+        dec zaehl
+        bne -
+        sec
+        rts
+_ok     clc
+        rts
+
+; warte: auf FLAG2 ($dd0d Bit 4) warten, hoechstens A Jiffies. C=1 bei Zeitablauf.
+warte   sta wmax
+        lda $a2
+        sta wst
+-       lda $dd0d
+        and #$10
+        bne _ja
+        lda $a2
+        sec
+        sbc wst
+        cmp wmax
+        bcc -
+        sec
+        rts
+_ja     clc
+        rts
+
+; ---------------------------------------------------------------------
+jiffy   sei                     ; A = lo, X = hi der Jiffy-Uhr
+        lda $a2
+        ldx $a1
+        cli
+        rts
+
+strlen  ldy #0
+-       lda (UP),y
+        beq +
+        iny
+        bne -
++       sty ulen
+        rts
+
+; ASCII-Text (nullterminiert, A/Y) in Kleinschrift-PETSCII ausgeben
+prt     sta PP
+        sty PP+1
+        ldy #0
+-       lda (PP),y
+        beq +
+        jsr asc
+        jsr CHROUT
+        iny
+        bne -
++       rts
+
+; ASCII -> PETSCII (Kleinschriftmodus), Unbekanntes als Punkt
+asc     cmp #13
+        beq _r
+        cmp #32
+        bcc _p
+        cmp #127
+        bcs _p
+        cmp #"a"
+        bcc +
+        cmp #"z"+1
+        bcs _p2
+        and #$df                ; a-z -> $41-$5a
+        rts
++       cmp #"A"
+        bcc _r
+        cmp #"Z"+1
+        bcs _p2
+        ora #$80                ; A-Z -> $c1-$da
+        rts
+_p2     cmp #"_"
+        beq _p
+        cmp #"["
+        beq _r
+        cmp #"]"
+        beq _r
+        cmp #"@"
+        beq _r
+        cmp #"`"
+        beq _p
+        cmp #"{"
+        bcs _p
+        rts
+_p      lda #"."
+_r      rts
+
+; ---------------------------------------------------------------------
+        .enc "none"
+s_titel .null "WiC64-Test (HTTP/HTTPS)", 13
+s_status .null "Status "
+s_len   .null "  Laenge "
+s_jif   .null "  Zeit "
+s_jif2  .null "/60 s", 13
+s_zeit  .null "Zeitueberschreitung, Phase "
+s_ende  .null "Fertig.", 13
+
+u1      .null "http://httpbin.org/anything/%mac/%ser"
+u2      .null "https://example.com/"
+u3      .null "http://c64.route64.de:5555/03/FF/%mac/"
+u4      .null "https://raw.githubusercontent.com/GideonZ/1541ultimate/master/LICENSE.txt"
+u5      .null "https://retro-modern.net/robots.txt"
+
+urls_lo .byte <u1, <u3, <u4, <u5, <u2
+urls_hi .byte >u1, >u3, >u4, >u5, >u2
+
+testnr  .byte 0
+resofs  .byte 0
+phase   .byte 0
+status  .byte 0
+len     .word 0
+got     .word 0
+t0      .word 0
+dt      .word 0
+hdr     .fill 4
+ulen    .byte 0
+ytmp    .byte 0
+wmax    .byte 0
+wst     .byte 0
+zaehl   .byte 0

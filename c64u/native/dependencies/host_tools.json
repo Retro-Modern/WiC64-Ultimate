@@ -1,0 +1,464 @@
+{
+  "url": "https://codeload.github.com/spiffycrew/Spiffy_Ultimate/tar.gz/3b582da78c57fb5b2d53bacb6a64dea5a4535f66",
+  "revision": "3b582da78c57fb5b2d53bacb6a64dea5a4535f66",
+  "archive": "native-host-tools.tar.gz",
+  "files": {
+    "64tass/64tass.c": {
+      "sha256": "6b561bfb50acd2a446ddcdc62eaaabb2a8cb50973c15295887a9c72a5d1ab85a",
+      "bytes": 188132
+    },
+    "64tass/64tass.h": {
+      "sha256": "b61194c01b173b072082ab587a0ad75c6cd284d6ac8ed5cb8536dd47050708c1",
+      "bytes": 1880
+    },
+    "64tass/Makefile": {
+      "sha256": "ee9ab1623d5cb47ed27361468c1b746d05005a1d2381e95ac74dd7d6eb843cb0",
+      "bytes": 12454
+    },
+    "64tass/addressobj.c": {
+      "sha256": "1d1ab5f600ea35c0a875d7d8d08f104e85c3f91a7fa4dddd433a3ae81ad68b9b",
+      "bytes": 15932
+    },
+    "64tass/addressobj.h": {
+      "sha256": "e779e454fee4f17d0baad9bb6ba7c8fbe3f35af7aebabcf16fa1a435fd97eccb",
+      "bytes": 2125
+    },
+    "64tass/arguments.c": {
+      "sha256": "aad0286271222e129f4959d1c128c4cd167f48fb5f1da043d185f1a0ae1542bf",
+      "bytes": 28024
+    },
+    "64tass/arguments.h": {
+      "sha256": "141c46c3fbe9abfe99e33feb4c64b6db78b50ba3a475c39f9c58bc63a27f5152",
+      "bytes": 2532
+    },
+    "64tass/attributes.h": {
+      "sha256": "9d2b70cfbac2da807a13d13a8cb2ce39164730c7a2c258c8c47bb6689be91b51",
+      "bytes": 1843
+    },
+    "64tass/avl.c": {
+      "sha256": "528679774c82c4f7e0295321521f166d3017779f9d8b339cfcdf54521e5f1314",
+      "bytes": 6742
+    },
+    "64tass/avl.h": {
+      "sha256": "f738d9a891ed63845cc2063da1bcd5198652be8f39599ac7ef560368e6d4616f",
+      "bytes": 2473
+    },
+    "64tass/bitsobj.c": {
+      "sha256": "763cb0c8a13cda0a4960dca6176f7116025e98f7bfea4e638255be24060ac3ed",
+      "bytes": 41732
+    },
+    "64tass/bitsobj.h": {
+      "sha256": "80cdbda4fc5b41735bf7e84d36dffc7e85e0bd25e1b5b78128667f921a47bcf8",
+      "bytes": 1870
+    },
+    "64tass/boolobj.c": {
+      "sha256": "68e4f9ae8a9e0791ebce047e3c4f8724110031c683021d32715a093d32c906c8",
+      "bytes": 7945
+    },
+    "64tass/boolobj.h": {
+      "sha256": "cb6518cc9df600c867246b404144fe3cf33c056e76bb76b4649bcfa7abd1bd21",
+      "bytes": 1492
+    },
+    "64tass/bytesobj.c": {
+      "sha256": "66242d3565197e372b112c21c98d4eee4bbbb8ec2fd4ababafd7ebc8e9bbc238",
+      "bytes": 35299
+    },
+    "64tass/bytesobj.h": {
+      "sha256": "db0acf9dcc80184bac3bfec6494c58a877c678658f66f8648974915a278e6f16",
+      "bytes": 1809
+    },
+    "64tass/codeobj.c": {
+      "sha256": "b308e8cffdad9b61d28347e05f5818e09b12223c8aeb0033fab0e9e78a8ff92f",
+      "bytes": 17820
+    },
+    "64tass/codeobj.h": {
+      "sha256": "c00f377cb03b7bf2d835ccd3d405e4862061f2e0d8e0e48bc7f9dd74cbfdd143",
+      "bytes": 1870
+    },
+    "64tass/dictobj.c": {
+      "sha256": "b909c70f8b4c2f38d3e009b1c892c06fa4b55fdb179c7c1afff82642dcf59eca",
+      "bytes": 14140
+    },
+    "64tass/dictobj.h": {
+      "sha256": "b56447e701f30d83cfc2b38514212af5f11f76b2c1fe01b7b3e27e7933b25aec",
+      "bytes": 1213
+    },
+    "64tass/encoding.c": {
+      "sha256": "4a0698a7d55bfc120ff00ae3ada35efe25f859e0356fca267e2fe60eee637771",
+      "bytes": 23069
+    },
+    "64tass/encoding.h": {
+      "sha256": "9c545e243a976e5b4ac3a8d3a15a33ab088312126eeb16df6fafa21ce8ea76da",
+      "bytes": 1576
+    },
+    "64tass/error.c": {
+      "sha256": "b516f4a296a5834a8926a718ce6435250cb527472218b03176be4aba50b214d8",
+      "bytes": 43470
+    },
+    "64tass/error.h": {
+      "sha256": "acf88d334d4f7d2a038da12f345b94adf6c2450d85a7b16340effde0a5d5fb33",
+      "bytes": 4466
+    },
+    "64tass/errorobj.c": {
+      "sha256": "72c7d4388d5f243774639652a224e9f9734019e07d579b14bb76a21137776dad",
+      "bytes": 4388
+    },
+    "64tass/errorobj.h": {
+      "sha256": "95800329ff950b4864ee35cac9262e0f2027b473e748714f54be95c355cdb4c5",
+      "bytes": 1837
+    },
+    "64tass/errors_e.h": {
+      "sha256": "4a6f1053dc8c619d54a4c08c4e801cf3fe1c1c32b91a1c85fb2c1c075cc09c07",
+      "bytes": 3715
+    },
+    "64tass/eval.c": {
+      "sha256": "56dc9bfc6bbdda2bb9437e5dce2b21fdcfd24a84bc64e33912e4a55ef944368b",
+      "bytes": 71111
+    },
+    "64tass/eval.h": {
+      "sha256": "75e3a9c0d80fa7eeac28deed481b8eeb5a8549d5c06957d37f5e49c890cbed14",
+      "bytes": 1903
+    },
+    "64tass/file.c": {
+      "sha256": "3ed017be76bb56207b4217a016671124c5c2f0301be1f2d91af6ff5bee5c4fbd",
+      "bytes": 31483
+    },
+    "64tass/file.h": {
+      "sha256": "bd06dff68c39cd09b794ed0eb48318b19887a2a21d07b70a26cdc6df8db2287c",
+      "bytes": 2107
+    },
+    "64tass/floatobj.c": {
+      "sha256": "83d26cdcbf8fb787ec6626851d716b8bf1cb8ef041af2aaf316d4f3d8007fb04",
+      "bytes": 12053
+    },
+    "64tass/floatobj.h": {
+      "sha256": "df511fd27d14ffb6c184438d84d189b5421f2127145ad3cefe3978d6eebafdaa",
+      "bytes": 1311
+    },
+    "64tass/functionobj.c": {
+      "sha256": "18533af2bf568413db67920d5baa09af8146cc9ee3145cc8395fdbfd46682c4d",
+      "bytes": 22042
+    },
+    "64tass/functionobj.h": {
+      "sha256": "b9486e5af247d4573f24caebf03cc09d72fa63ffc5c97d184dd8539df5d34dfb",
+      "bytes": 1489
+    },
+    "64tass/gapobj.c": {
+      "sha256": "889499dc60366a472ed3cc11de7a0da5dbdd52a7a2eaf863d821c39a4a8a78b3",
+      "bytes": 5388
+    },
+    "64tass/gapobj.h": {
+      "sha256": "be7fb4209d29a5c0bf5f4e97226b7f86917b49902d26941e8ec55de8396bae55",
+      "bytes": 1135
+    },
+    "64tass/identobj.c": {
+      "sha256": "6a013db5f3f593a0df01b44f929b37fca61db79e27ac9ae438cd75e73e385f1d",
+      "bytes": 1808
+    },
+    "64tass/identobj.h": {
+      "sha256": "d5eff9bc3c02d9df077818d1dc776ac28de867dd75c39f71db30ca615cfb82c7",
+      "bytes": 1154
+    },
+    "64tass/instruction.c": {
+      "sha256": "0e8854f6fcd6b74a77cc644cabcbc2d50610a3f44d527efba045eb5d75769b5f",
+      "bytes": 43297
+    },
+    "64tass/instruction.h": {
+      "sha256": "7465b85ec294d7a7bec27e64afe0389b5baf5597bf5fd3da9abd705744d79daf",
+      "bytes": 1534
+    },
+    "64tass/intobj.c": {
+      "sha256": "6b1d2a538638fa5897f96351159e97da3efcba8eb28e6d3f5d231128a297204b",
+      "bytes": 49309
+    },
+    "64tass/intobj.h": {
+      "sha256": "e1dcf04e86ceddca737458dcfd5bffda0734607bca5ed63263c1cbe28edcf14d",
+      "bytes": 1914
+    },
+    "64tass/inttypes.h": {
+      "sha256": "162e08b1371ca2e8f7738fdfd32e2f9225b0888ad77d1afeafb03efcec7e5b30",
+      "bytes": 3022
+    },
+    "64tass/isnprintf.c": {
+      "sha256": "5ac6a72a6c07cc0a67bed781f08ecf5a99136d6ed7912af50b509754a5045f7a",
+      "bytes": 17144
+    },
+    "64tass/isnprintf.h": {
+      "sha256": "4241afdab9a4f2174d6ebc88bc37ed3276a2723f828cb0ec159f0b468108ad2e",
+      "bytes": 982
+    },
+    "64tass/labelobj.c": {
+      "sha256": "56b0bdc48bee517fc65c85393ce6b3baac576cdf64a3e31b2a57da8a250e1f19",
+      "bytes": 3192
+    },
+    "64tass/labelobj.h": {
+      "sha256": "b33eb9e8ccc391f25a9d4c493a079c98b3a9f07e12f52db11daac55e12e5befe",
+      "bytes": 1286
+    },
+    "64tass/listing.c": {
+      "sha256": "8af7edb134f2fe8b4308debc64bc2954ba0825662af176c290ca7da5838d9ef9",
+      "bytes": 18309
+    },
+    "64tass/listing.h": {
+      "sha256": "ed17776c2fe2636db1546f99b9a688ea1e2252a707c3b47baae9212aa47dace0",
+      "bytes": 1739
+    },
+    "64tass/listobj.c": {
+      "sha256": "eadd36b158eb2f037f96a1d67e7cf33bc2f44fd501645f71e66fe7cd67d892a6",
+      "bytes": 20477
+    },
+    "64tass/listobj.h": {
+      "sha256": "8e026b6231ecf5c18c35915963789e49d93ee7e7b62230f40c9a12061d9b899e",
+      "bytes": 2149
+    },
+    "64tass/longjump.c": {
+      "sha256": "471c3b88aa0472754e050f56d66e77d87af231205b2e335789ed57b7c4c57637",
+      "bytes": 2141
+    },
+    "64tass/longjump.h": {
+      "sha256": "1bcb219f008ed2859fbacc805e93661c0aa49cdb996a369144e2279c9b42db13",
+      "bytes": 1152
+    },
+    "64tass/macro.c": {
+      "sha256": "9d3f25da231cae79282242311070855c88c98b4234c20985ace052ec507a935f",
+      "bytes": 26906
+    },
+    "64tass/macro.h": {
+      "sha256": "2aacaf74e4a87badf00d333750c97496bd1bfa7eb450ee58b098b93b1c40bc82",
+      "bytes": 1428
+    },
+    "64tass/macroobj.c": {
+      "sha256": "df521629823ccaaccb69859267a0e1350719c52d03af0c37a3d84ce10ec17767",
+      "bytes": 4802
+    },
+    "64tass/macroobj.h": {
+      "sha256": "6bd1280416e99ad532b37d183a654f88c8daaf86aa99885a3010edaf0d9cca78",
+      "bytes": 1598
+    },
+    "64tass/math.c": {
+      "sha256": "7809fa34374fe5b2e0daa14b2e9bd8d313f04c88e9ec95586a13c3c14246108b",
+      "bytes": 1138
+    },
+    "64tass/math.h": {
+      "sha256": "227018c8f75c54fbf530d9446a82d354ed5b8fe27a09b9f47e6f96c61d057ece",
+      "bytes": 1653
+    },
+    "64tass/mem.c": {
+      "sha256": "d2a3af4c54853d3c3af269a4a7bb69a69bbeb658cda10d28154250eb0e6be58b",
+      "bytes": 21992
+    },
+    "64tass/mem.h": {
+      "sha256": "3aeac255d03a77a40e98a8010f0d756bdcbca26bbf1dc82e1983f11fa90f5aa6",
+      "bytes": 1959
+    },
+    "64tass/mfuncobj.c": {
+      "sha256": "5fcd58be7e1e616076a5bafd522fd8e523588ff39efa22b160e807cfad6b0913",
+      "bytes": 5267
+    },
+    "64tass/mfuncobj.h": {
+      "sha256": "0bbb0c5f2f1e3d4586b09f116f8a32785ada19c6b447ae574fdbe38939680604",
+      "bytes": 1254
+    },
+    "64tass/my_getopt.c": {
+      "sha256": "97436665828cdac25cbe9ed696da5c3bee7edb45c297443409f47c6354f1ccba",
+      "bytes": 9623
+    },
+    "64tass/my_getopt.h": {
+      "sha256": "96670525e19baa15542291debf1c86a794cc2ca122e8cc496e92ec651dcc2511",
+      "bytes": 2098
+    },
+    "64tass/namespaceobj.c": {
+      "sha256": "049574492990096f2847439cedb8afa6dc255c39b562b3e9f170419ef0bcd430",
+      "bytes": 8653
+    },
+    "64tass/namespaceobj.h": {
+      "sha256": "f22feeb4663e49c967fe544da40eed4bbd6eddb0793bede77cdea91777735a6a",
+      "bytes": 1623
+    },
+    "64tass/noneobj.c": {
+      "sha256": "1ad01843807c3c3600f2cc404397c4598860d20fe06710a044d02939c5008afd",
+      "bytes": 3274
+    },
+    "64tass/noneobj.h": {
+      "sha256": "2a935f589a30050f24be7a01061d9593de2f0d6c2c89fb4ea6496341ca211133",
+      "bytes": 1117
+    },
+    "64tass/obj.c": {
+      "sha256": "36ae1ff0e72d10e7ba0de77880a064b8ca805177c8e0c3671812796c2475e502",
+      "bytes": 9574
+    },
+    "64tass/obj.h": {
+      "sha256": "825d3b9df827d84b2327bb0575a12488cbfa0dc3db990850f53c956bb05ac794",
+      "bytes": 1875
+    },
+    "64tass/opcodes.c": {
+      "sha256": "16cb3a83898be3e1d54cf3c29a3358ce683c7ed90a6df1191e523c7ad24a6858",
+      "bytes": 89629
+    },
+    "64tass/opcodes.h": {
+      "sha256": "310e4e038ef61b0dc0f155f38ab450835156ddcf462f3c0f410a1ee6ba1102f4",
+      "bytes": 2158
+    },
+    "64tass/operobj.c": {
+      "sha256": "a8d78b6384080db1d65b61d11045192e896cf6cdf5e4b9dcd62115b7ac0b6535",
+      "bytes": 7406
+    },
+    "64tass/operobj.h": {
+      "sha256": "8ff982be38c62723dfdce5a0c74123135afd3a0b1790fa296e1356006b3f0f89",
+      "bytes": 5873
+    },
+    "64tass/opt_bit.c": {
+      "sha256": "49974ef4252cfdbab43a47be2c752ac06b79ee248f000e276c7bfb35bef31696",
+      "bytes": 14609
+    },
+    "64tass/opt_bit.h": {
+      "sha256": "76b295c4e50a15faaa45b4fe2249c05da0b0b366bc8ef283ca8beb5e61ceed56",
+      "bytes": 1943
+    },
+    "64tass/optimizer.c": {
+      "sha256": "a1e1f776f3f8431c90260749908e6685ed507c5fda8f24fdb2e7e446a0cdaef3",
+      "bytes": 62551
+    },
+    "64tass/optimizer.h": {
+      "sha256": "a19da2f33d668032d08343d03af34697cc5162b0f6aad89a79ac9a1fd50c6a59",
+      "bytes": 1135
+    },
+    "64tass/registerobj.c": {
+      "sha256": "eff8c80096a598938c408826f8ee2557c6521f4d152f4d2a889fa6743dbaecb5",
+      "bytes": 6147
+    },
+    "64tass/registerobj.h": {
+      "sha256": "0086beace18bd6d8ec970e1b471324a542f06b3e356d887e407eac3575144379",
+      "bytes": 1245
+    },
+    "64tass/section.c": {
+      "sha256": "a535f65b25b9e6078bd004b2d76aba32e3c91070080823b6765ca9404bdf8f43",
+      "bytes": 6915
+    },
+    "64tass/section.h": {
+      "sha256": "5476a7b44cb5fd2ddc1ea4d1d82f0a70bbb021bb45cb066f5e33b80e2640e435",
+      "bytes": 2245
+    },
+    "64tass/stdbool.h": {
+      "sha256": "194c2db2f0332b8ffd38d2ce278ad8181fa60bbb031364bba2ed167054b158f9",
+      "bytes": 1078
+    },
+    "64tass/str.c": {
+      "sha256": "b805e345bad3167adb83b2d18d9c2b0961b1299de0c8393f190c22bd398a0f27",
+      "bytes": 3417
+    },
+    "64tass/str.h": {
+      "sha256": "90ab4e65860e686013b07633ae2616073b963fa121a80aebf52064004134fd6f",
+      "bytes": 1091
+    },
+    "64tass/strobj.c": {
+      "sha256": "16f85d96e6408dc3665a708c10ce58fd40b24f08b668fea7dc0f6a83dfc73615",
+      "bytes": 22998
+    },
+    "64tass/strobj.h": {
+      "sha256": "367cd9510c77af132405e18ca36d2d9229f593569496c3af782ad669274ec55c",
+      "bytes": 1418
+    },
+    "64tass/ternary.c": {
+      "sha256": "e75af60cbca2f89a4bb26e08d8e8a2f6df955626790622ea537c4424112156ed",
+      "bytes": 5650
+    },
+    "64tass/ternary.h": {
+      "sha256": "c9123cd39ca2bd30c5ffde195539e54b458400343118ed58f101e4a3d474eb23",
+      "bytes": 1989
+    },
+    "64tass/typeobj.c": {
+      "sha256": "b32c8e682fd5c77dc8cf19c2a352acefcd1619dfba474edfff382660db68fc3e",
+      "bytes": 5295
+    },
+    "64tass/typeobj.h": {
+      "sha256": "95a4728b04b155114d97cf8fcc1537552b6c617098ccc41c5ad97441c9ffbac0",
+      "bytes": 2884
+    },
+    "64tass/unicode.c": {
+      "sha256": "f120350acb7350866187b06e56e2a76b66de612a908a58e9bb9d8f69103a16df",
+      "bytes": 20080
+    },
+    "64tass/unicode.h": {
+      "sha256": "4df2e699d0c1a3b980a52645b5692a1626d31a70b4dcd579ef219a3501cc391d",
+      "bytes": 1728
+    },
+    "64tass/unicodedata.c": {
+      "sha256": "84083aea9fd4d821c6dc46904d8f7a4e63b41151e54567e5185dc23e920217fb",
+      "bytes": 450267
+    },
+    "64tass/unicodedata.h": {
+      "sha256": "60669924c14859f4c3c0153c73dda83499b3083cd144af6f9f803ddabb5a2dc7",
+      "bytes": 1587
+    },
+    "64tass/values.c": {
+      "sha256": "691452859e50689008c6cb90d36c87a4ecb2092cb4e487f48e85ce87e4c2c75c",
+      "bytes": 5688
+    },
+    "64tass/values.h": {
+      "sha256": "00b9613685f4cd3070b095b60a495081fb34c57bf52ad3206988e40a9503340d",
+      "bytes": 1186
+    },
+    "64tass/variables.c": {
+      "sha256": "42eb8670dbfcbcdd228d984e5d83fa46fb64ca3f1fef30c22df5b610e58aeca2",
+      "bytes": 25259
+    },
+    "64tass/variables.h": {
+      "sha256": "b6e507edcc2c4785444c19ee3d3142c5579f9cbaa533e6b9d79f2e2f677845a9",
+      "bytes": 1990
+    },
+    "64tass/wait_e.h": {
+      "sha256": "6356d3811f8cbef0aa6d5023aeeb7b00b40c2a21bc38f9831c49573807dd0bb7",
+      "bytes": 1103
+    },
+    "64tass/wchar.c": {
+      "sha256": "a709dc98cba22abe754176fa2610af374c70dc8373a72ad3b8a883ab58581e74",
+      "bytes": 31152
+    },
+    "64tass/wchar.h": {
+      "sha256": "95e1b70e32fa9045c3847fc20eee67e56fa14f0ac589b9b37ed223dadc116a3b",
+      "bytes": 1448
+    },
+    "64tass/wctype.c": {
+      "sha256": "d644b8afb44f3cbf84210462d3867487820f0915635df9522cc46d1577b7e3a9",
+      "bytes": 1081
+    },
+    "64tass/wctype.h": {
+      "sha256": "131606a5e69da6bae8c51e43555458aabf9c57af1b2ff1bf5c75c7d51fb558b0",
+      "bytes": 1114
+    },
+    "Makefile": {
+      "sha256": "39971a5b7dca9cd1284d26360a3b0c054cbb8d1af42544d6003231e35d824432",
+      "bytes": 1370
+    },
+    "bin2hex.c": {
+      "sha256": "497d948334d3af19801ba37c89892330988bb0beed11666c1c70df5693908a7e",
+      "bytes": 6938
+    },
+    "checksum.c": {
+      "sha256": "9f39be597edc785ba8ef42dbd674232c8d69963b461bf6e1470c5b629a5a11f9",
+      "bytes": 2283
+    },
+    "hex2bin.c": {
+      "sha256": "6d6291e58c22baa9e05165f0f22519214ed8ec7144e428cda8392631be812242",
+      "bytes": 9828
+    },
+    "make_mem.c": {
+      "sha256": "b39f0f9b684c52870771f313dce7bc4bed0f1c4668ede30a7a207d0f497a71e0",
+      "bytes": 2202
+    },
+    "parse_iec.py": {
+      "sha256": "a3a5fab56667f644927171eb2aac04898eed9f2040be677312344f7f967572a7",
+      "bytes": 12831
+    },
+    "parse_nano.py": {
+      "sha256": "595c0ce0152b09c4d46a46f02fe39cd6d7825f5717c4e1a4500a132b8a450f00",
+      "bytes": 7927
+    },
+    "LICENSE.txt": {
+      "upstream": "LICENSE.txt",
+      "bytes": 35147,
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+    }
+  }
+}

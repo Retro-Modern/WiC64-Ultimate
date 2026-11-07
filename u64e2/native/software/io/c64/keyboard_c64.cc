@@ -1,0 +1,478 @@
+#include <stdio.h>
+#include "itu.h"
+#include "keyboard_c64.h"
+#include "keyboard_usb.h"
+#if U64 && !RECOVERYAPP
+#include "joystick_output.h"
+#endif
+
+#ifndef NO_FILE_ACCESS
+#include "FreeRTOS.h"
+#include "task.h"
+#include "timers.h"
+#endif
+
+uint8_t wasd_to_joy = 0; // overwritten by U64_config, if it exists
+
+const uint8_t modifier_map[] = {
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01, // left shift
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00, // right shift
+    0x00,0x00,0x04,0x00,0x00,0x02,0x00,0x00, // control, C=
+    0x00 };
+
+const uint8_t keymap_normal[] = {
+    KEY_BACK, KEY_RETURN, KEY_RIGHT, KEY_F7, KEY_F1, KEY_F3, KEY_F5, KEY_DOWN,
+    '3', 'w', 'a', '4', 'z', 's', 'e', 0x00,
+	'5', 'r', 'd', '6', 'c', 'f', 't', 'x',
+	'7', 'y', 'g', '8', 'b', 'h', 'u', 'v',
+	'9', 'i', 'j', '0', 'm', 'k', 'o', 'n',
+	'+', 'p', 'l', '-', '.', ':', '@', ',',
+	'\\','*', ';', KEY_HOME, 0x00, '=', '|', '/',
+	'1', '`', 0x00, '2', ' ', 0x00, 'q', KEY_BREAK,
+	0x00 };
+
+/*
+    0x33,0x77,0x61,0x34,0x7a,0x73,0x65,0x00, //  3, w, a, 4, z, s, e, empty
+    0x35,0x72,0x64,0x36,0x63,0x66,0x74,0x78, //  5, r, d, 6, c, f, t, x
+    0x37,0x79,0x67,0x38,0x62,0x68,0x75,0x76, //  7, y, g, 8, b, h, u, v
+    0x39,0x69,0x6A,0x30,0x6D,0x6B,0x6F,0x6E, //  9, i, j, 0, m, k, o, n
+    0x2B,0x70,0x6C,0x2D,0x2E,0x3A,0x40,0x2C, //  +, p, l, -, ., :, @, ,
+    0x5C,0x2A,0x3B,0x13,0x01,0x3D,0x7C,0x2F, //  \, *, ;, Home , (empty), =, |, /
+    0x31,0x60,0x00,0x32,0x20,0x00,0x71,0x03, //  1, `, (empty), 2, SP, (empty), q, RunStop
+    0x00 };
+*/
+
+const uint8_t keymap_shifted[] = {
+    KEY_INSERT, 0x8D, KEY_LEFT, KEY_F8, KEY_F2, KEY_F4, KEY_F6, KEY_UP,
+    '#', 'W', 'A', '$', 'Z', 'S', 'E', 0x00,
+	'%', 'R', 'D', '&', 'C', 'F', 'T', 'X',
+	'\'','Y', 'G', '(', 'B', 'H', 'U', 'V',
+	')', 'I', 'J', '0', 'M', 'K', 'O', 'N',
+	'{', 'P', 'L', '}', '>', '[', '@', '<',
+	'_', '*', ']', KEY_CLEAR,0x00, '=', '^', '?',
+	'!', '~', 0x00, '\"', KEY_SHIFT_SP, 0x00, 'Q', KEY_BREAK,
+    0x00 };
+
+const uint8_t keymap_control[] = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    KEY_CTRL_3, 0x17, 0x01, KEY_CTRL_4, 0x1a, 0x13, 0x05, 0x00, //  3, w, a, 4, z, s, e, empty
+    KEY_CTRL_5, KEY_CTRL_R, 0x04, KEY_CTRL_6, 0x03, 0x06, 0x14, 0x18, //  5, r, d, 6, c, f, t, x
+    KEY_CTRL_7, 0x19, 0x07, KEY_CTRL_8, KEY_CTRL_B, 0x08, 0x15, 0x16, //  7, y, g, 8, b, h, u, v
+    KEY_CTRL_9, 0x09, 0x0A, KEY_CTRL_0, 0x0D, 0x0B, 0x0F, 0x0E, //  9, i, j, 0, m, k, o, n
+    0x00, 0x10, 0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, //  +, p, l, -, ., :, @, ,
+    0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x00, //  \, *, ;, Home , (empty), =, |, /
+    KEY_CTRL_1, 0x00, 0x00, KEY_CTRL_2, 0x00, 0x00, 0x11, 0x00, //  1, `, (empty), 2, SP, (empty), q, RunStop
+	0x00 };
+
+const uint8_t *keymaps[8] = {
+		keymap_normal,  // 0
+		keymap_shifted, // 1 Shift
+		keymap_control, // 2 C=
+		keymap_control, // 3 Shift C=
+		keymap_control, // 4 Control
+		keymap_control, // 5 Shift Control
+		keymap_control, // 6 C= control
+		keymap_control  // 7 Shift C= Control
+};
+
+uint8_t Keyboard_C64 :: matrixModifierFlag(uint8_t row, uint8_t col)
+{
+    if ((row >= 8) || (col >= 8)) {
+        return 0;
+    }
+    return modifier_map[(row << 3) | col];
+}
+
+uint8_t Keyboard_C64 :: matrixToKeyCode(uint8_t row, uint8_t col, uint8_t shift_flag)
+{
+    if ((row >= 8) || (col >= 8)) {
+        return 0;
+    }
+    return keymaps[shift_flag & 0x07][(row << 3) | col];
+}
+
+Keyboard_C64 :: Keyboard_C64(GenericHost *h, volatile uint8_t *row, volatile uint8_t *col, volatile uint8_t *joy)
+{
+    host = h;
+    col_register = col;
+    row_register = row;
+    joy_register = joy;
+
+    repeat_speed = 4;
+    first_delay = 16;
+    key_head = 0;
+    key_tail = 0;
+    mtrx_prev  = 0xFF;
+    shift_prev = 0xFF;
+    scan_paused = 0;
+    scan_timer = 0;
+#if KEYBOARD_C64_TIMER_SCAN
+    // The delays count scans; scale them to this timer's period.
+    repeat_speed = (repeat_speed * 4) / KEYBOARD_C64_SCAN_PERIOD_TICKS;
+    first_delay = (first_delay * 4) / KEYBOARD_C64_SCAN_PERIOD_TICKS;
+    scan_timer = xTimerCreate("KbScan", KEYBOARD_C64_SCAN_PERIOD_TICKS, pdTRUE, this,
+                              (TimerCallbackFunction_t) Keyboard_C64 :: scan_timer_callback);
+    if (scan_timer) {
+        xTimerStart((TimerHandle_t) scan_timer, 0);
+    }
+#endif
+    delay_count = first_delay;
+    armed = true;
+}
+
+Keyboard_C64 :: ~Keyboard_C64()
+{
+#if KEYBOARD_C64_TIMER_SCAN
+    if (scan_timer) {
+        xTimerStop((TimerHandle_t) scan_timer, portMAX_DELAY);
+        xTimerDelete((TimerHandle_t) scan_timer, portMAX_DELAY);
+        scan_timer = 0;
+    }
+#endif
+}
+
+// Runs in the timer service task, above the network tasks, so a request cannot hold the scan
+// off. The CIA is touched only while the host has the machine stopped with cartridge I/O.
+void Keyboard_C64 :: scan_timer_callback(void *timer)
+{
+#if KEYBOARD_C64_TIMER_SCAN
+    Keyboard_C64 *keyboard = (Keyboard_C64 *) pvTimerGetTimerID((TimerHandle_t) timer);
+    if (!keyboard || keyboard->scan_paused || !keyboard->host) {
+        return;
+    }
+    if (!keyboard->host->keyboard_scan_allowed()) {
+        // Nothing to see, and nothing seen: the next key is a new key.
+        keyboard->mtrx_prev = 0xFF;
+        keyboard->shift_prev = 0xFF;
+        return;
+    }
+    if (keyboard->host->keyboard_scan_deferred()) {
+        // The CIA may not be at its address this instant; the key state stays
+        // what it was, so a held key is not reported again on the next tick.
+        return;
+    }
+    keyboard->scan();
+#endif
+}
+
+uint8_t Keyboard_C64 :: scan_keyboard(volatile uint8_t *row_reg, volatile uint8_t *col_reg)
+{
+    const uint8_t *map;
+
+    uint8_t shift_flag = 0;
+    uint8_t mtrx = 0x40;
+    uint8_t col, row;
+    uint8_t mod = 0;
+
+    *col_reg = 0; // select all rows of keyboard
+    if (*row_reg != 0xFF) { // process key image
+        map = keymap_normal;
+        col = 0xFE;
+        for(int idx=0,y=0;y<8;y++) {
+            *col_reg = 0xFF;
+            *col_reg = col;
+            *col_reg = col;
+            do {
+                row = *row_reg;
+                *col_reg = col;
+            } while(row != *row_reg);
+            for(int x=0;x<8;x++, idx++) {
+                if((row & 1)==0) {
+                    mod = modifier_map[idx];
+                    shift_flag |= mod;
+                    if(!mod) {
+                        mtrx = idx;
+                    }
+                }
+                row >>= 1;
+            }
+            col = (col << 1) | 1;
+        }
+    }
+
+    map = keymaps[shift_flag & 0x07];
+    return map[mtrx];
+}
+
+bool Keyboard_C64 :: joystick_blocks_keyboard(uint8_t observed_active_low, uint8_t injected_active_low)
+{
+    observed_active_low &= 0x1F;
+    injected_active_low &= 0x1F;
+    return (observed_active_low != 0x1F) && (observed_active_low != injected_active_low);
+}
+
+#include "u64.h" // temporary!
+void Keyboard_C64 :: scan(void)
+{
+    const uint8_t *map;
+
+    uint8_t shift_flag = 0;
+    uint8_t mtrx = 0x40;
+    uint8_t col, row, key = 0xFF;
+    uint8_t mod = 0;
+    bool joy = false;
+    bool software_joy_only = false;
+    bool keyboard_pressed = false;
+    uint8_t joy_shift_flag = 0;
+    uint8_t joy_mtrx = 0x40;
+    uint8_t injected_joy2 = 0x1F;
+    uint8_t injected_joy1 = 0x1F;
+
+    if(!host) {
+        return;
+    }
+    // check if we have access to the I/O
+    if(!(host->is_accessible()))
+        return;
+
+#if U64 && !RECOVERYAPP
+    if (system_usb_keyboard.restMatrixActive()) {
+        mtrx_prev = 0xFF;
+        shift_prev = 0xFF;
+        return;
+    }
+#endif
+
+#if U64 == 2
+    MATRIX_WASD_TO_JOY = 0; // Forces WASD crap to be off
+    BLING_RX_FLAGS = 0x01; // disable shift lock in bling board
+#endif
+
+    *row_register = 0xFF;
+    *row_register = 0xFF;
+
+    // Scan Joystick Port 2 first
+    *col_register = 0xFF; // deselect keyboard for pure joystick scan
+    *col_register = 0XFF; // delay
+
+    row = *joy_register;
+    row = *joy_register;
+#if U64 && !RECOVERYAPP
+    JoystickOutput::instance().snapshot(injected_joy1, injected_joy2);
+#endif
+    if((row & 0x1F) != 0x1F) {
+        if     (!(row & 0x01)) { joy_shift_flag = 0x01; joy_mtrx = 0x07; }
+        else if(!(row & 0x02)) { joy_shift_flag = 0x00; joy_mtrx = 0x07; }
+        else if(!(row & 0x04)) { joy_shift_flag = 0x01; joy_mtrx = 0x02; }
+        else if(!(row & 0x08)) { joy_shift_flag = 0x00; joy_mtrx = 0x02; }
+        else if(!(row & 0x10)) { joy_shift_flag = 0x00; joy_mtrx = 0x01; }
+
+        software_joy_only = !joystick_blocks_keyboard(row, injected_joy2);
+        if (!software_joy_only) {
+            joy = true;
+            shift_flag = joy_shift_flag;
+            mtrx = joy_mtrx;
+        }
+    }
+
+    // Physical joystick activity shares matrix lines with the keyboard and must keep
+    // the old precedence. REST-owned port 2 activity should not starve the local keyboard.
+    if(!joy) {
+        *col_register = 0; // select all rows of keyboard
+        if (*row_register != 0xFF) { // process key image
+            keyboard_pressed = true;
+            map = keymap_normal;
+            col = 0xFE;
+            for(int idx=0,y=0;y<8;y++) {
+                *col_register = 0xFF;
+                *col_register = col;
+                *col_register = col;
+                do {
+                    row = *row_register;
+                    *col_register = col;
+                } while(row != *row_register);
+                for(int x=0;x<8;x++, idx++) {
+                    if((row & 1)==0) {
+                        mod = modifier_map[idx];
+                        shift_flag |= mod;
+                        if(!mod) {
+                            mtrx = idx;
+                        }
+                    }
+                    row >>= 1;
+                }
+                col = (col << 1) | 1;
+            }
+        } else if (!software_joy_only) { // no key pressed
+            mtrx_prev = 0xFF;
+            shift_prev = 0xFF;
+            armed = true;
+#if U64 == 2
+    MATRIX_WASD_TO_JOY = wasd_to_joy;
+    BLING_RX_FLAGS = 0x00; // reenable shift lock
+#endif
+            return;
+        }
+    }
+    if (software_joy_only && !keyboard_pressed) {
+        shift_flag = joy_shift_flag;
+        mtrx = joy_mtrx;
+    }
+
+#if U64 == 2
+    MATRIX_WASD_TO_JOY = wasd_to_joy;
+    BLING_RX_FLAGS = 0x00; // reenable shift lock
+#endif
+    // there was a key pressed (or the joystick is used)
+    // determine which map to use
+    map = keymaps[shift_flag & 0x07];
+    key = map[mtrx];
+
+    if(!key) { // no sensible key pressed, clear history
+        mtrx_prev = 0xFF;
+        shift_prev = 0xFF;
+        armed = armed || !joy; // only modifiers held, e.g. SHIFT LOCK
+        return;
+    }
+
+    if(!armed) {
+        return;
+    }
+
+    if((shift_flag == shift_prev) && (mtrx_prev == mtrx)) { // this key was pressed before
+        if (delay_count == 0) {
+            delay_count = repeat_speed;
+            // do not return, store char
+        } else {
+            delay_count = delay_count - 1;
+            return;
+        }
+    } else if(mtrx == mtrx_prev) { // same key, but modifier changed.. ignore! (for some time)
+        delay_count = first_delay;
+        shift_prev = shift_flag;
+        return;
+    } else {  // first time this key was pressed
+        delay_count = first_delay;
+        mtrx_prev = mtrx;
+        shift_prev = shift_flag;
+    }
+
+//    printf("%b ", key);
+    push_key(key);
+}
+
+// The timer scan and the user interface task (push_head) both add keys; getch() is
+// the only reader and the only writer of key_tail.
+void Keyboard_C64 :: push_key(int key)
+{
+#if KEYBOARD_C64_TIMER_SCAN
+    portENTER_CRITICAL();
+#endif
+    int next_head = (key_head + 1) % KEY_BUFFER_SIZE;
+    if(next_head != key_tail) {
+        key_buffer[key_head] = key;
+        key_head = next_head;
+    }
+#if KEYBOARD_C64_TIMER_SCAN
+    portEXIT_CRITICAL();
+#endif
+}
+
+int Keyboard_C64 :: getch(void)
+{
+#ifndef NO_FILE_ACCESS
+    static TickType_t previousWake = 0;
+    vTaskDelayUntil(&previousWake, 4);
+    TickType_t now = xTaskGetTickCount();
+    previousWake = now;
+    if (!scan_timer) {
+        scan();
+    }
+#else
+    scan();
+    wait_ms(20);
+#endif
+
+    if(key_head == key_tail) {
+        return system_usb_keyboard.getch();
+    }
+    int key = key_buffer[key_tail];
+    key_tail = (key_tail + 1) % KEY_BUFFER_SIZE;
+
+    return key;
+}
+
+void Keyboard_C64 :: push_head(int c)
+{
+    // For now, we only support push tail, alas
+    push_key(c);
+}
+
+void Keyboard_C64 :: wait_free(void)
+{
+    // getch() falls back to the USB keyboard, so the menu can be driven - and
+    // left - from there too. Those keys are kept out of the C64 matrix while the
+    // menu owns the keyboard, so the hardware scan below never sees them. Wait
+    // for the USB report as well, or the still-held exit key is handed straight
+    // to the running program the moment the menu gives the matrix back. ESC is
+    // RUN/STOP, which the SID player uses to return to the menu.
+    int usb_timeout = KEYBOARD_WAIT_FREE_TIMEOUT_MS;
+    while (system_usb_keyboard.anyKeyPressed() && usb_timeout) {
+        usb_timeout--;
+        wait_ms(1);
+    }
+
+    if(!host) {
+        return;
+    }
+
+    // check if we have access to the I/O
+    if(!(host->is_accessible()))
+        return;
+
+    // The timer scan drives the same column select; keep it out of the way
+    // while this loop reads all rows at once.
+    scan_paused++;
+#if U64==2
+    BLING_RX_FLAGS = 0x01; // disable shift lock in bling board
+#endif
+    *col_register = 0; // select all rows
+
+    int timeout = KEYBOARD_WAIT_FREE_TIMEOUT_MS;
+    while ((*row_register != 0xFF) && (timeout)) {
+        timeout--;
+        wait_ms(1);
+    }
+    *col_register = 0xFF;
+#if U64==2
+    BLING_RX_FLAGS = 0x00; // allow shift lock
+#endif
+    scan_paused--;
+}
+
+void Keyboard_C64 :: set_delays(int initial, int repeat)
+{
+    first_delay  = initial;
+    repeat_speed = repeat;
+}
+
+void Keyboard_C64 :: ignore_held_input(void)
+{
+    // One step, so the timer scan cannot queue a key between the disarm and
+    // the drop. Like clear_buffer(), it drops from the reading end only.
+#if KEYBOARD_C64_TIMER_SCAN
+    portENTER_CRITICAL();
+#endif
+    armed = false;
+    mtrx_prev = 0xFF;
+    shift_prev = 0xFF;
+    key_tail = key_head;
+#if KEYBOARD_C64_TIMER_SCAN
+    portEXIT_CRITICAL();
+#endif
+}
+
+void Keyboard_C64 :: clear_buffer(void)
+{
+    // Dropped from the reading end, the only end this task owns, so a key the
+    // scan adds meanwhile is neither lost nor read twice.
+    key_tail = key_head;
+    // getch() falls through to the USB keyboard, so its queued input has to go
+    // too. Keys injected through the input API are left alone.
+    system_usb_keyboard.clear_pending_input();
+}

@@ -1,0 +1,17 @@
+/* Shared C/assembler resource lengths. GPL-3.0-or-later. */
+#ifndef C64U_ESP_IMAGE_PROFILE_H
+#define C64U_ESP_IMAGE_PROFILE_H
+#ifndef C64U_ESP_RETURN_APP
+#define C64U_ESP_RETURN_APP 0
+#endif
+#if C64U_ESP_RETURN_APP != 0 && C64U_ESP_RETURN_APP != 1
+#error C64U_ESP_RETURN_APP must be 0 or 1
+#endif
+#define C64U_ESP_TLS_APP_BYTES 960656
+#define C64U_ESP_RETURN_APP_BYTES 839584
+#if C64U_ESP_RETURN_APP
+#define C64U_ESP_RESOURCE_BYTES C64U_ESP_RETURN_APP_BYTES
+#else
+#define C64U_ESP_RESOURCE_BYTES C64U_ESP_TLS_APP_BYTES
+#endif
+#endif

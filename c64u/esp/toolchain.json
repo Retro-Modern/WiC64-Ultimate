@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "sdk": {
+    "url": "https://github.com/espressif/esp-idf.git",
+    "commit": "c8fc5f643b7a7b0d3b182d3df610844e3dc9bd74",
+    "version": "v5.3.1",
+    "file_count": 23018,
+    "export_digest_sha256": "bbedb89c36c72e79cf80a305b8f949753dcbea46269b59385555b0f7b4b9fc22",
+    "submodules": {
+      "components/bootloader/subproject/components/micro-ecc/micro-ecc": "24c60e243580c7868f4334a1ba3123481fe1aa48",
+      "components/bt/controller/lib_esp32": "3bb36a79cdfad65c656b9238e0d46b935775ed72",
+      "components/bt/controller/lib_esp32c2/esp32c2-bt-lib": "db84a7e4539c5d9e6b8ec882b82a5de0fb8400c7",
+      "components/bt/controller/lib_esp32c3_family": "bfdfe8f851c99ced8316b133b0b15521917ea049",
+      "components/bt/controller/lib_esp32c5/esp32c5-bt-lib": "77c67a4d06c95113a2d1766892cde59f5af744af",
+      "components/bt/controller/lib_esp32c6/esp32c6-bt-lib": "3396205d48647372568ba67e41c4e08917ef1038",
+      "components/bt/controller/lib_esp32h2/esp32h2-bt-lib": "85174c19ced288f48254b01957609b8423c757bf",
+      "components/bt/esp_ble_mesh/lib/lib": "4934ca903807dd74f7f808dadcd9a478e18fc6c3",
+      "components/bt/host/nimble/nimble": "2cf7edde63866f5663bbcdfb8776cf29c0809456",
+      "components/cmock/CMock": "eeecc49ce8af123cf8ad40efdb9673e37b56230f",
+      "components/cmock/CMock/vendor/c_exception": "71b47be7c950f1bf5f7e5303779fa99a16224bb6",
+      "components/cmock/CMock/vendor/unity": "cf949f45ca6d172a177b00da21310607b97bc7a7",
+      "components/esp_coex/lib": "d99dfd1883a1468b8986362a1382a4f46e918b60",
+      "components/esp_phy/lib": "06e7625de197bc12797dd701d6762229bca01826",
+      "components/esp_wifi/lib": "d1df171e4c9756dac17aa586201c7f94b99dc8aa",
+      "components/heap/tlsf": "8fc595fe223cd0b3b5d7b29eb86825e4bd38e6e8",
+      "components/json/cJSON": "acc76239bee01d8e9c858ae2cab296704e52d916",
+      "components/lwip/lwip": "f79221431fa9042b3572d271d687de66da7560c4",
+      "components/mbedtls/mbedtls": "72aa687352a469044cbb946f3fdb261430e41ce1",
+      "components/mqtt/esp-mqtt": "aa6f889fb4f6f743b3a550aa587713aabbdca1fc",
+      "components/openthread/lib": "203c78501e9a6ea9ca3a929e6f9b6b9691ef16ee",
+      "components/openthread/openthread": "f32c18bc0840f400182456e58ae3900fc2fb4af7",
+      "components/protobuf-c/protobuf-c": "abc67a11c6db271bedbb9f58be85d6f4e2ea8389",
+      "components/spiffs/spiffs": "0dbb3f71c5f6fae3747a9d935372773762baf852",
+      "components/unity/unity": "bf560290f6020737eafaa8b5cbd2177c3956c03f"
+    }
+  },
+  "tools": [
+    {
+      "name": "cmake",
+      "version": "3.24.0",
+      "url": "https://github.com/Kitware/CMake/releases/download/v3.24.0/cmake-3.24.0-linux-x86_64.tar.gz",
+      "filename": "cmake-3.24.0-linux-x86_64.tar.gz",
+      "bytes": 47042675,
+      "sha256": "726f88e6598523911e4bce9b059dc20b851aa77f97e4cc5573f4e42775a5c16f",
+      "destination": "cmake"
+    },
+    {
+      "name": "esp-rom-elfs",
+      "version": "20240305",
+      "url": "https://github.com/espressif/esp-rom-elfs/releases/download/20240305/esp-rom-elfs-20240305.tar.gz",
+      "filename": "esp-rom-elfs-20240305.tar.gz",
+      "bytes": 3258247,
+      "sha256": "a26609b415710f0163d785850c769752717004059c129c472e9a0cbd54e0422c",
+      "destination": "esp-rom-elfs"
+    },
+    {
+      "name": "esp32ulp-elf",
+      "version": "2.38_20240113",
+      "url": "https://github.com/espressif/binutils-gdb/releases/download/esp32ulp-elf-2.38_20240113/esp32ulp-elf-2.38_20240113-linux-amd64.tar.gz",
+      "filename": "esp32ulp-elf-2.38_20240113-linux-amd64.tar.gz",
+      "bytes": 11138071,
+      "sha256": "d13a808365b78465fa6591636dfbbb9604d9d15a397c3d9cd22626d54828ac2c",
+      "destination": "esp32ulp-elf"
+    },
+    {
+      "name": "ninja",
+      "version": "1.11.1",
+      "url": "https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip",
+      "filename": "ninja-linux-v1.11.1.zip",
+      "bytes": 119463,
+      "sha256": "b901ba96e486dce377f9a070ed4ef3f79deb45f4ffe2938f8e7ddc69cfb3df77",
+      "destination": "ninja"
+    },
+    {
+      "name": "xtensa-esp-elf",
+      "version": "esp-13.2.0_20240530",
+      "url": "https://github.com/espressif/crosstool-NG/releases/download/esp-13.2.0_20240530/xtensa-esp-elf-13.2.0_20240530-x86_64-linux-gnu.tar.xz",
+      "filename": "xtensa-esp-elf-13.2.0_20240530-x86_64-linux-gnu.tar.xz",
+      "bytes": 112073272,
+      "sha256": "fcef03d87eac44c0dbee2bbee98443ed2fcf82720dcd8ebfe00640807b0f07c2",
+      "destination": "xtensa-esp-elf"
+    }
+  ],
+  "python_constraints_sha256": "0c7fae59e6c89a26bda04c42b847da37a506821b488c0058b878fde3b7e1a57e"
+}

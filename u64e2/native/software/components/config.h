@@ -1,0 +1,371 @@
+/*
+ *   1541 Ultimate - The Storage Solution for your Commodore computer.
+ *   Copyright (C) 2009  Gideon Zweijtzer - Gideon's Logic Architectures
+ *
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *   Abstract:
+ *   Definitions of the existing configuration items, structs and functions.
+ */
+#ifndef CONFIG_H
+#define CONFIG_H
+
+#include <stdint.h>
+#include "flash.h"
+#include "indexed_list.h"
+#include "mystring.h"
+#include "file.h"
+
+#define CFG_FILEPATH "/flash/config"
+// Groups
+#define SORT_ORDER_HDR_AUVID    100
+#define SORT_ORDER_CFG_VIDEO    110 //
+#define SORT_ORDER_CFG_MIXER    120 //
+#define SORT_ORDER_CFG_SPEAKER  130 //
+#define SORT_ORDER_CFG_LEDS     140 // 
+#define SORT_ORDER_CFG_CLOCK    150 //
+
+#define SORT_ORDER_HDR_C64      200
+#define SORT_ORDER_CFG_MEM      210 //
+#define SORT_ORDER_CFG_TURBO    220 //
+#define SORT_ORDER_CFG_TWEAKS   230 //
+#define SORT_ORDER_CFG_POWER    240 //
+
+#define SORT_ORDER_HDR_USERIF   300
+#define SORT_ORDER_CFG_USERIF   310 //
+
+#define SORT_ORDER_HDR_SID      500
+#define SORT_ORDER_CFG_SIDSKT   501 //
+#define SORT_ORDER_CFG_SIDADDR  502 //
+#define SORT_ORDER_CFG_ULTISID  503 //
+#define SORT_ORDER_CFG_SIDREP   510 // and 511 for socket 2
+#define SORT_ORDER_CFG_SIDPLAY  520 //
+
+#define SORT_ORDER_HDR_PERIPH   600
+#define SORT_ORDER_CFG_DRIVE_A  610 //
+#define SORT_ORDER_CFG_DRIVE_B  611 //
+#define SORT_ORDER_CFG_SOFTIEC  620 //
+#define SORT_ORDER_CFG_TAPE     630 //
+#define SORT_ORDER_CFG_PRINTER  640 //
+#define SORT_ORDER_CFG_MODEM    650 //
+#define SORT_ORDER_CFG_JOYSTICK 660 //
+
+#define SORT_ORDER_HDR_NETWORK  700
+#define SORT_ORDER_CFG_ETH      710 //
+#define SORT_ORDER_CFG_WIFI     720 //
+#define SORT_ORDER_CFG_SERVICES 730 //
+#define SORT_ORDER_CFG_STREAMS  740 //
+
+// #define SORT_ORDER_HDR_MISC     800
+
+#define GROUP_NAME_LEDS "LED Lighting"
+
+#define CFG_TYPE_VALUE   0x01
+#define CFG_TYPE_ENUM    0x02
+#define CFG_TYPE_STRING  0x03
+#define CFG_TYPE_FUNC    0x04
+#define CFG_TYPE_SEP     0x05
+#define CFG_TYPE_INFO    0x06
+#define CFG_TYPE_STRFUNC 0x07
+#define CFG_TYPE_STRPASS 0x08
+#define CFG_SEPARATOR    0xFE
+#define CFG_TYPE_END     0xFF
+
+class UserInterface;
+
+struct t_cfg_definition
+{
+    uint8_t id;
+    uint8_t type;
+    const char *item_text;
+    const char *item_format;
+    const char **items;
+    int  min, max;
+    long int def; // also used as pointer to default string. For 64 bit systems it needs to be a long!
+};
+
+class ConfigPage;
+class ConfigStore;
+class ConfigurableObject;
+class ConfigItem;
+class Action;
+
+typedef int (*t_change_hook)(ConfigItem *);
+typedef void (*t_cfg_func)(UserInterface *, ConfigItem *);
+typedef void (*t_cfg_strfunc)(ConfigItem *, IndexedList<char *> &strings);
+
+class ConfigSetting
+{
+public:
+	int	setting_index;
+	ConfigItem *parent;
+	mstring setting_name;
+
+	ConfigSetting(int index, ConfigItem *parent, char *name);
+};
+
+class ConfigItem
+{
+	t_change_hook hook;
+	bool enabled;
+    int  value;
+    const uint8_t *order; // each enum value from min to max once, in list order; NULL lists by value
+    char *string;
+
+    int setChanged(void);
+    int  pack(uint8_t *buffer, int len);
+    void unpack(uint8_t *buffer, int len);
+    void reset(void);
+    mstring altname;
+public:    
+    ConfigStore *store;
+    const t_cfg_definition *definition;
+
+    ConfigItem(ConfigStore *s, t_cfg_definition *d);
+    ~ConfigItem();
+
+    static ConfigItem *separator();
+    static ConfigItem *heading(const char *);
+
+    const char *get_item_name() { return definition->item_text; }
+    const char *get_display_string(char *buffer, int width, int act, int inact);
+    int  fetch_possible_settings(IndexedList<ConfigSetting *> &list);
+    void execute(int sel);
+    void setChangeHook(t_change_hook hook) { this->hook = hook; }
+    void setListOrder(const uint8_t *o) { order = o; }
+    int  listedValue(int pos) { return order ? order[pos] : definition->min + pos; }
+    int  listPosition(int v);
+    bool isEnabled(void) { return enabled; }
+    void setEnabled(bool en) { enabled = en; }
+
+    const char *get_item_altname() { if (altname.length()) { return altname.c_str(); } else { return get_item_name(); } }
+    ConfigItem *set_item_altname(const char *n) { altname = n; return this; }
+
+    const int getValue() { return value; }
+    const char *getString() { return string; }
+    int  setValue(int v) { value = v; return setChanged(); }
+    void setValueQuietly(int v) { value = v; }
+    void setString(const char *str);
+    int next(int);
+    int previous(int);
+
+    friend class ConfigStore;
+    friend class RtcConfigStore;
+    friend class ConfigIO; // this is an extension to config.cc, so direct access is granted
+};
+
+
+class ConfigStore
+{
+    int sort_order;
+    IndexedList<ConfigurableObject *> objects;
+    void *hook_obj;
+    mstring store_name;
+    mstring alt_name;
+    ConfigPage *page;
+    bool  staleEffect;
+    bool  staleFlash;
+    bool  hidden;
+    int  pack(uint8_t *buffer, int len);
+    void unpack(uint8_t *buffer, int len);
+public:
+    IndexedList <ConfigItem*> items;
+
+    ConfigStore(ConfigPage *page, const char *name, t_cfg_definition *defs, ConfigurableObject *obj);
+    virtual ~ConfigStore();
+
+    void set_alt_name(const char *alt) { alt_name = alt; }
+    void set_sort_order(int so) { sort_order = so; }
+    int  get_sort_order() { return sort_order; }
+    void addObject(ConfigurableObject *obj);
+    int  unregister(ConfigurableObject *obj);
+    void hide() { hidden = true; }
+    void convert_to_group(const char *name, int sort_order);
+    bool isHidden() { return hidden; }
+
+// Interface functions
+    virtual void reset(void);
+    virtual void read(bool ignore);
+    virtual void write(void);
+    virtual void at_open_config(void);
+
+    virtual void at_close_config(void)
+    {
+        if (need_effectuate()) {
+            effectuate();
+            set_effectuated();
+        }
+    }
+
+    virtual void effectuate(void);
+
+    // Whether this store belongs in a .cfg file. Stores that live in a device
+    // rather than in an Ultimate flash page -- the SID replacements -- still
+    // belong there, so having no flash page is not the deciding factor. A
+    // store overrides this to stay out.
+    virtual bool save_to_cfg_file(void) { return true; }
+
+    void  set_hook_object(void *obj) { hook_obj = obj; }
+    void *get_hook_object() { return hook_obj; }
+    void set_change_hook(uint8_t id, t_change_hook hook);
+    void disable(uint8_t id);
+    void enable(uint8_t id);
+    ConfigurableObject *get_first_object(void) { return objects[0]; }
+
+    ConfigItem *find_item(uint8_t id);
+    ConfigItem *find_item(const char *str);
+    int  get_value(uint8_t id);
+    const char *get_store_name() { return store_name.c_str(); }
+    const char *get_alt_store_name() { return alt_name.length() ? alt_name.c_str() : store_name.c_str(); }
+    const char *get_string(uint8_t id);
+    void set_value(uint8_t id, int value);
+    void set_string(uint8_t id, const char *s);
+    void dump(void);
+    void check_bounds(void);
+    bool is_flash_stale(void) { return staleFlash; }
+    bool need_effectuate(void) { return staleEffect; }
+    void set_effectuated(void) { staleEffect = false; }
+    const void set_need_flash_write(bool b) { staleFlash = b; }
+    const void set_need_effectuate(void) { staleEffect = true; }
+    ConfigPage *get_page(void) { return page; }
+
+    IndexedList <ConfigItem *> *getItems() { return &items; }
+
+    friend class ConfigIO;
+    friend class ConfigItem;
+    friend class ConfigPage;
+};
+    
+class ConfigPage
+{
+    uint32_t id;
+    int  block_size;
+    int  flash_page;
+    uint8_t *mem_block;
+    IndexedList<ConfigStore*> stores;
+    Flash *flash;
+
+    int pack(void);
+    void unpack(void);
+
+public:
+    ConfigPage(Flash *fl, int id, int page, int page_size) : flash(fl), id(id), flash_page(page), block_size(page_size), stores(4, NULL) {
+        mem_block = new uint8_t[page_size];
+    }
+
+    virtual ~ConfigPage() {
+        delete[] mem_block;
+    }
+
+    void add_store(ConfigStore *s) {
+        stores.append(s);
+    }
+    uint32_t get_id() {
+        return id;
+    }
+
+    int get_flash_index() const { return flash_page; }
+    void read(bool ignore);
+    void read_from_file(File *f);
+    void write();
+#if U64 && P08_SERVICE
+    // Explicit native nonsecret preference write, independent of the RAM
+    // diagnostic guard on generic configuration saves. Full readback required.
+    bool p15_write_verified();
+#endif
+    void unpack(ConfigStore *s);
+};
+
+class ConfigManager
+{
+	IndexedList<ConfigStore*> stores;
+	IndexedList<ConfigPage*> pages;
+    Flash *flash;
+    int num_pages;
+    bool safeMode;
+#if U64 && P08_SERVICE
+    int p12_private_claims[4];
+#endif
+
+    ConfigManager();
+    ~ConfigManager();
+public:
+	static ConfigManager* getConfigManager() {
+		static ConfigManager config_manager;
+		return &config_manager;
+	}
+    
+    ConfigStore *register_store(uint32_t page_id, const char *name, t_cfg_definition *defs, ConfigurableObject *ob);
+#if U64 && P08_SERVICE
+    // Allocation only: never writes or registers secret ConfigItems.
+    int p12_reserve_private_slots(const bool blocked[24], int slots[4]);
+    bool p12_private_slot_reserved(int slot) const;
+    bool p12_private_slot_owned(uint32_t id, int slot) const;
+    bool p15_public_page_exclusive(ConfigPage *page, int slot);
+#endif
+    ConfigStore *find_store(const char *storename);
+    ConfigStore *find_store(uint32_t page_id);
+    void add_custom_store(ConfigStore *cfg);
+    void remove_store(ConfigStore *cfg);
+
+	Flash *get_flash_access(void) { return flash; }
+	IndexedList<ConfigStore*> *getStores() { return &stores; }
+
+	friend class ConfigIO;
+};
+
+
+// Base class for any configurable object
+class ConfigurableObject
+{
+public:
+    ConfigStore *cfg;
+
+    ConfigurableObject() {
+    	cfg = NULL;
+    }
+
+    virtual ~ConfigurableObject() {
+        if(cfg) {
+            int remainingObjects = cfg->unregister(this);
+            if (!remainingObjects) {
+                ConfigManager :: getConfigManager()->remove_store(cfg);
+                delete cfg;
+            }
+        }
+    }
+    
+    virtual bool register_store(uint32_t store_id, const char *name, t_cfg_definition *defs)
+    {
+        cfg = ConfigManager :: getConfigManager()->register_store(store_id, name, defs, this);
+        return (cfg != NULL);
+    }
+
+    virtual void on_edit() { }
+    virtual void effectuate_settings() { }
+
+    void effectuate_registered_settings()
+    {
+        if (cfg && cfg->need_effectuate()) {
+            cfg->effectuate();
+        } else {
+            effectuate_settings();
+        }
+    }
+};
+
+extern const char *en_dis[];
+
+#include "config_collection.h"
+#endif
