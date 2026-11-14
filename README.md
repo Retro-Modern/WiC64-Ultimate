@@ -16,8 +16,8 @@ last versions (U64E2 Beta 5, C64U Beta 2) it is maintained here by
 
 | Folder | Device | Version | State |
 |---|---|---|---|
-| `u64e2/` | Ultimate 64 Elite II, firmware 3.15 | **B5RM2** (Beta 5 + changes below) | built on macOS arm64, tested on hardware |
-| `c64u/` | C64 Ultimate, firmware 1.1.0 | Beta 2 + `WOLFSSL_ALT_CERT_CHAINS` | **not built, not tested** (no device here) |
+| `u64e2/` | Ultimate 64 Elite II, firmware 3.15 | **B5RM3** (Beta 5 + changes below) | built on macOS arm64, tested on hardware |
+| `c64u/` | C64 Ultimate, firmware 1.1.0 | Beta 2 + `WOLFSSL_ALT_CERT_CHAINS` + reset fix | **not built, not tested** (no device here) |
 | `tests/` | test programs (64tass) and telnet helpers | | |
 
 **Download** (ready-to-use package, CFW + ESP app + restore + Control Center):
@@ -28,6 +28,13 @@ Discussion (German): https://www.forum64.de/index.php?thread/167059/
 
 ### Changes since Beta 5 (U64E2)
 
+- **B5RM3:** WiC64 survives a C64 reset, like a real WiC64 on the user port.
+  Before, every reset (also starting a PRG or CRT from the menu or the REST
+  API) ended the session with `C64_RESET_NOTIFIED` and WiC64 stayed silent
+  until it was stopped and started by hand. Now the service runs the normal
+  verified stop/restore and starts a new session on its own (~1 s). A stopped
+  WiC64 stays stopped; other errors behave as before (`p08_service.cc`,
+  `reset_restart`; also applied to `c64u/`, unbuilt).
 - ESP app **B5RM1**: certificate chains are built by mbedTLS from the app's own
   table of 118 Mozilla roots (`p18_ca.c`, taken from C64U Beta 2), so servers
   that send an extra cross-signed certificate (e.g. example.com) work. The
@@ -36,7 +43,7 @@ Discussion (German): https://www.forum64.de/index.php?thread/167059/
 - "Flash into ESP32" in the file browser verifies the image only once, in RAM,
   with a progress bar. SHA-256 is slow on the Ultimate CPU (~40 s per image);
   before, the file was hashed three times without any display.
-- WiC64 Status shows the correct version ("B5RM2" instead of "Beta 4").
+- WiC64 Status shows the correct version ("B5RM3" instead of "Beta 4").
 - `build.py` bundles the B5RM1 app by default (`assets/wic64_esp.bin`).
 
 Earlier fixes by us that are already part of Beta 5 / C64U Beta 2: HTTPS to
@@ -45,7 +52,11 @@ on-screen menu when it was closed with a context menu open, "Connection"
 cycling Auto → LAN → WLAN → Auto again, closing files on a removed medium,
 "Flash into ESP32" running out of memory.
 
-### Hardware test (U64 Elite II, firmware 3.15a, 07.11.2026)
+### Hardware test (U64 Elite II, firmware 3.15a, 07.11. and 14.11.2026)
+
+B5RM3 (14.11.): with WiC64 active, a game was started as PRG and as Magic Desk
+CRT; WiC64 was ACTIVE again after ~1 s and the program fetched data over HTTPS
+without help. A stopped WiC64 stayed stopped after a reset.
 
 `tests/tlsprobe.tass`: example.com 2.5 s, badssl.com 5.7 s, api.github.com
 1.9 s; expired, wrong.host, self-signed, untrusted-root and incomplete-chain
@@ -106,8 +117,8 @@ seinen letzten Fassungen (U64E2 Beta 5, C64U Beta 2) pflegt
 
 | Ordner | Gerät | Fassung | Zustand |
 |---|---|---|---|
-| `u64e2/` | Ultimate 64 Elite II, Firmware 3.15 | **B5RM2** (Beta 5 + Änderungen unten) | auf macOS arm64 gebaut, am Gerät getestet |
-| `c64u/` | C64 Ultimate, Firmware 1.1.0 | Beta 2 + `WOLFSSL_ALT_CERT_CHAINS` | **weder gebaut noch getestet** (kein Gerät) |
+| `u64e2/` | Ultimate 64 Elite II, Firmware 3.15 | **B5RM3** (Beta 5 + Änderungen unten) | auf macOS arm64 gebaut, am Gerät getestet |
+| `c64u/` | C64 Ultimate, Firmware 1.1.0 | Beta 2 + `WOLFSSL_ALT_CERT_CHAINS` + Reset-Fix | **weder gebaut noch getestet** (kein Gerät) |
 | `tests/` | Testprogramme (64tass) und Telnet-Helfer | | |
 
 **Download** (fertiges Paket: CFW, ESP-App, Wiederherstellung, Control Center):
@@ -118,6 +129,13 @@ Diskussion: https://www.forum64.de/index.php?thread/167059/
 
 ### Änderungen gegenüber Beta 5 (U64E2)
 
+- **B5RM3:** WiC64 übersteht einen C64-Reset, wie ein echter WiC64 am
+  Userport. Bisher beendete jeder Reset (auch ein PRG-/CRT-Start über das
+  Menü oder die REST-Schnittstelle) die Sitzung mit `C64_RESET_NOTIFIED`, und
+  WiC64 blieb stumm, bis man ihn von Hand stoppte und neu startete. Jetzt
+  läuft der normale geprüfte Stop/Restore und danach von selbst eine neue
+  Sitzung (~1 s). Ein gestoppter WiC64 bleibt gestoppt, andere Fehler wie
+  bisher (`p08_service.cc`, `reset_restart`; auch in `c64u/`, ungebaut).
 - ESP-App **B5RM1**: Zertifikatsketten baut mbedTLS aus einer eigenen Tabelle
   mit 118 Mozilla-Wurzeln (`p18_ca.c`, aus C64U Beta 2). Server, die ein
   zusätzliches Querzertifikat mitschicken (z. B. example.com), gehen damit.
@@ -126,7 +144,7 @@ Diskussion: https://www.forum64.de/index.php?thread/167059/
 - „Flash into ESP32“ im Dateibrowser prüft die Datei nur noch einmal, im RAM,
   mit Fortschrittsbalken. SHA-256 ist auf der Ultimate-CPU langsam (~40 s je
   Abbild); vorher wurde die Datei dreimal geprüft, ohne Anzeige.
-- WiC64 Status zeigt die richtige Version („B5RM2“ statt „Beta 4“).
+- WiC64 Status zeigt die richtige Version („B5RM3“ statt „Beta 4“).
 - `build.py` bündelt standardmäßig die B5RM1-App (`assets/wic64_esp.bin`).
 
 Frühere Korrekturen von uns, die schon in Beta 5 / C64U Beta 2 stecken: HTTPS
@@ -135,7 +153,11 @@ Bildschirmmenüs beim Schließen mit offenem Kontextmenü, „Connection“ wied
 Auto → LAN → WLAN → Auto, Schließen von Dateien auf gezogenem Medium,
 „Flash into ESP32“ ohne Speicherfehler.
 
-### Test am Gerät (U64 Elite II, Firmware 3.15a, 07.11.2026)
+### Test am Gerät (U64 Elite II, Firmware 3.15a, 07.11. und 14.11.2026)
+
+B5RM3 (14.11.): bei laufendem WiC64 ein Spiel als PRG und als Magic-Desk-CRT
+gestartet; WiC64 war nach ~1 s wieder ACTIVE, das Programm holte ohne
+Nachhilfe Daten per HTTPS. Ein gestoppter WiC64 blieb nach Reset gestoppt.
 
 `tests/tlsprobe.tass`: example.com 2,5 s, badssl.com 5,7 s, api.github.com
 1,9 s; expired, wrong.host, self-signed, untrusted-root und incomplete-chain

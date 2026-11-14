@@ -47,6 +47,9 @@ class Service {
  bool backup_valid,b_backup_valid,global_valid,rom_done,prepared,bad_snapshot,response_started,endpoint_reset_pending;
  volatile bool menu_hold,external_reset,portal_reset_owner;
  bool portal_restart,portal_loading,backend_working,backend_inflight;
+ // Retro-Modern: a C64 reset restarts a native session like a real WiC64
+ // stays usable across resets (stop/restore, then a fresh session).
+ bool reset_restart;
  uint8_t *program_data;uint32_t program_size;
  uint8_t program_mode,program_drive;char program_name[64];
  bool program_prepared,program_loading;

@@ -45,7 +45,7 @@ const char *state_name(State s) {static const char *v[]={"IDLE","STARTING","ACTI
 const char *restore_name(Restore s) {static const char *v[]={"NOT_NEEDED","PENDING","RESTORED","NEEDS_ATTENTION"};return v[unsigned(s)<=NEEDS_ATTENTION?unsigned(s):unsigned(NEEDS_ATTENTION)];}
 Service::Service():mutex(xSemaphoreCreateMutex()),task(0),b_power_item(0),b_address_item(0),parallel_item(0),turbo_item(0),serial_item(0),burst_item(0),speed_item(0),badlines_item(0),supercpu_item(0),
  backup_valid(false),b_backup_valid(false),global_valid(false),rom_done(false),prepared(false),bad_snapshot(false),response_started(false),endpoint_reset_pending(false),
- menu_hold(false),external_reset(false),portal_reset_owner(false),portal_restart(false),portal_loading(false),backend_working(false),backend_inflight(false),program_data(0),program_size(0),program_mode(0),program_drive(0),program_prepared(false),program_loading(false),pending_network_preference(0xff),native_sequence(0),consumed_hook_request(0),tcp_read_ticket_current(0),
+ menu_hold(false),external_reset(false),portal_reset_owner(false),portal_restart(false),reset_restart(false),portal_loading(false),backend_working(false),backend_inflight(false),program_data(0),program_size(0),program_mode(0),program_drive(0),program_prepared(false),program_loading(false),pending_network_preference(0xff),native_sequence(0),consumed_hook_request(0),tcp_read_ticket_current(0),
  work_request(0),last_request(0),last_drive_request(0),sample_generation(0),last_d_sequence(0),request_received(0),request_total(0),response_length(0),published_next(0),consumed_current(0),
  work_command(0),work_protocol(0),response_status(0),response_flags(0)
 {
@@ -213,7 +213,7 @@ Result Service::request_stop(const uint8_t session[8])
         (status.state==RESTORED&&status.restore==RESTORE_OK&&portal_restart))) {
         backend.cancel_requested=true;discard_secure_setup();status.state=STOPPING;status.restore=PENDING;
         discard_exchange_buffers();
-        status.portal_pending=status.program_pending=false;status.drives_prepared=false;portal_restart=false;prepared=response_started=endpoint_reset_pending=false;result=OK;
+        status.portal_pending=status.program_pending=false;status.drives_prepared=false;portal_restart=false;reset_restart=false;prepared=response_started=endpoint_reset_pending=false;result=OK;
     }
     unlock();return result;
 }
@@ -228,7 +228,7 @@ Result Service::request_native_stop()
        (status.state==RESTORED&&status.restore==RESTORE_OK&&portal_restart)){
         backend.cancel_requested=true;discard_secure_setup();status.state=STOPPING;status.restore=PENDING;
         discard_exchange_buffers();
-        status.portal_pending=status.program_pending=false;status.drives_prepared=false;portal_restart=false;prepared=response_started=false;result=OK;
+        status.portal_pending=status.program_pending=false;status.drives_prepared=false;portal_restart=false;reset_restart=false;prepared=response_started=false;result=OK;
     }
     unlock();return result;
 }
@@ -246,7 +246,7 @@ Result Service::request_portal()
         // a fresh session/helper; no old request or cached grant survives it.
         backend.cancel_requested=true;status.state=STOPPING;status.restore=PENDING;
         discard_exchange_buffers();
-        status.portal_pending=true;status.program_pending=false;status.drives_prepared=false;portal_restart=true;prepared=response_started=false;result=OK;
+        status.portal_pending=true;status.program_pending=false;status.drives_prepared=false;portal_restart=true;reset_restart=false;prepared=response_started=false;result=OK;
     }
     unlock();return result;
 }
@@ -470,10 +470,20 @@ void Service::step()
         else if(status.program_pending)program_step();
         else if(status.portal_pending)portal_step();
         else active_step();
+    }else if(status.state==ERROR && reset_restart && !menu_hold){
+        // Same verified restore path as a requested stop; the session stays
+        // reserved and is renewed below once RESTORED.
+        backend.cancel_requested=true;status.state=STOPPING;status.restore=PENDING;
     }else if(status.state==ERROR && backup_valid && c1541_A && c1541_A->p08_try_lock()){
         c1541_A->registers[C1541_RESET]=7;barrier();c1541_A->registers[C1541_POWER]=0;c1541_A->unlock();
     }
     if(status.state==RESTORED&&portal_restart&&!menu_hold)queue_native_locked(true);
+    else if(status.state==RESTORED&&reset_restart&&!menu_hold&&!backend_working&&!backend_inflight){
+        // An external cartridge (or anything else start_step rejects) ends
+        // the automatic restart; the service then stays stopped as before.
+        reset_restart=false;
+        if(queue_native_locked(false)!=OK)__atomic_store_n(&native_drive_a_reservation,0,__ATOMIC_RELEASE);
+    }
     unlock();
 }
 void Service::portal_step()
@@ -530,6 +540,7 @@ void Service::fault(const char *reason)
     discard_exchange_buffers();
     discard_secure_setup();
     copy_text(status.last_error,sizeof(status.last_error),reason);status.state=ERROR;
+    reset_restart=status.native_session&&!strcmp(reason,"C64_RESET_NOTIFIED");
     status.restore=(backup_valid || b_backup_valid || global_valid)?NEEDS_ATTENTION:NOT_NEEDED;prepared=response_started=endpoint_reset_pending=false;status.portal_pending=status.program_pending=false;status.drives_prepared=false;portal_restart=false;discard_program();
     if(backup_valid && c1541_A && c1541_A->p08_try_lock()) {
         c1541_A->registers[C1541_RESET]=7;barrier();c1541_A->registers[C1541_POWER]=0;c1541_A->unlock();
@@ -1012,7 +1023,7 @@ void Service::stop_step()
         uint8_t no_session[8]={};p12_reset_commands(no_session);
         backup_valid=false;status.restore=RESTORE_OK;status.state=RESTORED;
         // A portal restart owns the gap between its restored and next session.
-        if(!portal_restart)__atomic_store_n(&native_drive_a_reservation,0,__ATOMIC_RELEASE);
+        if(!portal_restart&&!reset_restart)__atomic_store_n(&native_drive_a_reservation,0,__ATOMIC_RELEASE);
     } else fault(status.last_error[0]?status.last_error:"RESTORE_VERIFY_FAILED");
 }
 }

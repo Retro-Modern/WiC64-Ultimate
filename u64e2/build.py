@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Current source distribution, modified 2026-11-07.
-"""Build WiC64 U64E2 B5RM2 (Beta 5 + Retro-Modern changes). No network or device operations."""
+"""Build WiC64 U64E2 B5RM3 (Beta 5 + Retro-Modern changes). No network or device operations."""
 from pathlib import Path
 import argparse
 import datetime
@@ -156,8 +156,8 @@ def main():
     image, check = cfw.build_cfw(elf, app)
     out = work / 'out'
     (out / 'WiC64').mkdir(parents=True)
-    (out / 'WiC64_U64E2_B5RM2.cfw').write_bytes(image)
-    (out / 'WiC64_U64E2_B5RM2.elf').write_bytes(elf)
+    (out / 'WiC64_U64E2_B5RM3.cfw').write_bytes(image)
+    (out / 'WiC64_U64E2_B5RM3.elf').write_bytes(elf)
     shutil.copyfile(ROOT / 'assets/U64E2_ESP_RESTORE.ESP', out / 'U64E2_ESP_RESTORE.ESP')
     shutil.copyfile(ROOT / 'assets/WIC64CC.PRG', out / 'WiC64/WIC64CC.PRG')
     shutil.copyfile(ROOT / 'assets/README.TXT', out / 'README.TXT')
