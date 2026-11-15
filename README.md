@@ -1,9 +1,11 @@
-# WiC64 for Ultimate 64 Elite II and C64 Ultimate
+# WiC64 for Ultimate 64 (Elite II and first generation) and C64 Ultimate
 
 WiC64 emulation as a RAM custom firmware (CFW) for the **Ultimate 64 Elite II**
 (firmware 3.15) and the **Commodore C64 Ultimate** (firmware 1.1.0). Programs
 on the C64 see a WiC64 on the user port; HTTP and HTTPS run over the
 Ultimate's LAN or WLAN. HTTPS is handled by an app on the ESP32-S3 WLAN module.
+Since 15 Nov 2026 there is also a port for the **first-generation Ultimate 64**
+(Nios II, firmware 3.15a); there TLS runs on the Ultimate's CPU (`u64i/`).
 
 Created by **TheRealWanderer** (Forum64), who released the sources under
 GPL-3.0 in November 2026 so that others can continue the project. Since his
@@ -17,12 +19,14 @@ last versions (U64E2 Beta 5, C64U Beta 2) it is maintained here by
 | Folder | Device | Version | State |
 |---|---|---|---|
 | `u64e2/` | Ultimate 64 Elite II, firmware 3.15 | **B5RM3** (Beta 5 + changes below) | built on macOS arm64, tested on hardware |
+| `u64i/` | Ultimate 64 / Elite, **first generation** (Nios II), firmware 3.15a | **B5RM3** (patch against Gideon 3.15a + `u64e2/`) | built on macOS arm64, tested on hardware (LAN, WLAN) |
 | `c64u/` | C64 Ultimate, firmware 1.1.0 | Beta 2 + `WOLFSSL_ALT_CERT_CHAINS` + reset fix | **not built, not tested** (no device here) |
 | `tests/` | test programs (64tass) and telnet helpers | | |
 
 **Download** (ready-to-use package, CFW + ESP app + restore + Control Center):
 - https://retro-modern.net/downloads.html#wic64
-- GitHub release: https://github.com/Retro-Modern/WiC64-Ultimate/releases/latest
+- GitHub releases: https://github.com/Retro-Modern/WiC64-Ultimate/releases
+  (`u64e2-…` for the Elite II, `u64i-…` for the first generation)
 
 Discussion (German): https://www.forum64.de/index.php?thread/167059/
 
@@ -88,6 +92,11 @@ On macOS arm64 this produced the tested CFW byte for byte (sha256
 **C64U** (`c64u/`, Ubuntu 24.04 x86_64 or WSL2): `./setup.sh`, then
 `./build.sh all`. See `c64u/README.md`.
 
+**U64I** (`u64i/`, first generation, macOS arm64): nios2-elf GCC 13.3
+(`u64i/werkzeug/nios2-toolchain.sh`), then `u64i/bauen.sh <workdir>`. The
+script fetches Gideon's 3.15a, applies `u64i/patches/u64i.patch` and builds
+`WiC64_U64I_B5RM3.u64` (about 30 s). Details (German): `u64i/README.md`.
+
 The Control Center (`WIC64CC.PRG`) is included as a binary only, as in the
 original packages.
 
@@ -101,12 +110,14 @@ WiC64 API.
 
 ---
 
-# WiC64 für Ultimate 64 Elite II und C64 Ultimate
+# WiC64 für Ultimate 64 (Elite II und erste Generation) und C64 Ultimate
 
 WiC64-Emulation als RAM-CFW für die **Ultimate 64 Elite II** (Firmware 3.15)
 und den **Commodore C64 Ultimate** (Firmware 1.1.0). Programme auf dem C64
 sehen am Userport ein WiC64; HTTP und HTTPS laufen über LAN oder WLAN der
 Ultimate. HTTPS übernimmt eine App auf dem ESP32-S3 des WLAN-Moduls.
+Seit dem 15.11.2026 gibt es auch eine Fassung für den **Ultimate 64 der ersten
+Generation** (Nios II, Firmware 3.15a); dort rechnet die Ultimate TLS selbst (`u64i/`).
 
 Geschrieben von **TheRealWanderer** (Forum64), der die Quellen im November
 2026 unter GPL-3.0 freigegeben hat, damit andere weitermachen können. Seit
@@ -118,12 +129,14 @@ seinen letzten Fassungen (U64E2 Beta 5, C64U Beta 2) pflegt
 | Ordner | Gerät | Fassung | Zustand |
 |---|---|---|---|
 | `u64e2/` | Ultimate 64 Elite II, Firmware 3.15 | **B5RM3** (Beta 5 + Änderungen unten) | auf macOS arm64 gebaut, am Gerät getestet |
+| `u64i/` | Ultimate 64 / Elite, **erste Generation** (Nios II), Firmware 3.15a | **B5RM3** (Patch gegen Gideon 3.15a + `u64e2/`) | auf macOS arm64 gebaut, am Gerät getestet (LAN, WLAN) |
 | `c64u/` | C64 Ultimate, Firmware 1.1.0 | Beta 2 + `WOLFSSL_ALT_CERT_CHAINS` + Reset-Fix | **weder gebaut noch getestet** (kein Gerät) |
 | `tests/` | Testprogramme (64tass) und Telnet-Helfer | | |
 
 **Download** (fertiges Paket: CFW, ESP-App, Wiederherstellung, Control Center):
 - https://retro-modern.net/downloads.html#wic64
-- GitHub-Release: https://github.com/Retro-Modern/WiC64-Ultimate/releases/latest
+- GitHub-Releases: https://github.com/Retro-Modern/WiC64-Ultimate/releases
+  (`u64e2-…` für die Elite II, `u64i-…` für die erste Generation)
 
 Diskussion: https://www.forum64.de/index.php?thread/167059/
 
@@ -188,6 +201,11 @@ Auf macOS arm64 kam dabei bytegleich die getestete CFW heraus (sha256
 
 **C64U** (`c64u/`, Ubuntu 24.04 x86_64 oder WSL2): `./setup.sh`, dann
 `./build.sh all`. Siehe `c64u/README.md`.
+
+**U64I** (`u64i/`, erste Generation, macOS arm64): nios2-elf GCC 13.3
+(`u64i/werkzeug/nios2-toolchain.sh`), dann `u64i/bauen.sh <arbeitsordner>`.
+Das Skript holt Gideons 3.15a, spielt `u64i/patches/u64i.patch` ein und baut
+`WiC64_U64I_B5RM3.u64` (rund 30 s). Einzelheiten: `u64i/README.md`.
 
 Das Control Center (`WIC64CC.PRG`) liegt wie in den Originalpaketen nur als
 Programmdatei bei.
