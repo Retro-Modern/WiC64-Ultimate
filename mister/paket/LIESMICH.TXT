@@ -1,0 +1,96 @@
+WiC64 fuer den C64-Kern des MiSTer - Fassung 1.0 (20.11.2026)
+Retro-Modern - https://retro-modern.net
+
+Eine WiC64 am Userport des MiSTer-C64-Kerns, ohne Zusatzhardware. Der Kern
+reicht den Userport ueber die serielle Leitung an einen kleinen Dienst auf
+dem Linux des MiSTer weiter; der beantwortet die WiC64-Befehle mit dem Netz
+des MiSTer (LAN oder WLAN). Programme sehen eine WiC64 mit Firmware 2.4.4.
+
+Kein Produkt des WiC64-Teams, sondern eine Nachbildung. Fragen und Fehler
+bitte an Retro-Modern, nicht an das WiC64-Team.
+
+
+INHALT
+
+  _Computer/C64_WiC64_20261120.rbf   C64-Kern mit WiC64 (MiSTer-devel
+                                     C64_MiSTer, Stand 29.10.2026)
+  linux/wic64/wic64d.py              der Dienst (Python 3, liegt dem
+                                     MiSTer-Linux bei)
+  Scripts/wic64_einrichten.sh        Dienst eintragen und starten
+  Scripts/wic64_entfernen.sh         Dienst anhalten und austragen
+  WiC64-MiSTer/                      diese Anleitung, Quellen, Lizenz
+
+
+EINRICHTEN
+
+1. Die Ordner _Computer, linux und Scripts auf die SD-Karte des MiSTer
+   kopieren (ins Hauptverzeichnis, vorhandene Ordner zusammenfuehren).
+2. Im MiSTer-Menue: Scripts > wic64_einrichten. Das traegt den Dienst in
+   linux/user-startup.sh ein (Sicherung: user-startup.sh.vor-wic64) und
+   startet ihn sofort. Nach jedem Neustart laeuft er von selbst.
+3. Computer > C64_WiC64 laden. Im OSD (F12):
+     Hardware > WiC64 (Userport) = Enabled
+     UART Mode                   = None
+   und die Einstellungen speichern.
+
+Der Dienst tut nur etwas, solange der C64-Kern laeuft. Andere Kerne merken
+nichts von ihm. Ist ein UART-Modus eingestellt (Modem, MIDI ...), haelt er
+sich heraus.
+
+Ausprobieren: den WiC64-Launcher von https://wic64.net laden (Portal mit
+SID-Radio und Programmen), oder das WiC64 Control Center.
+
+Entfernen: Scripts > wic64_entfernen. Kern und Ordner linux/wic64 dann von
+Hand loeschen, wenn gewuenscht.
+
+
+WAS GEHT
+
+- alle Befehle der WiC64-Firmware 2.4.4: HTTP, HTTPS (Zertifikate werden
+  geprueft), POST, TCP, Uhrzeit/Zeitzone, Server, Security-Token, Protokolle
+  W, R und E (Antworten ueber 64 KB)
+- dazu die PORT64-Erweiterungen der Ultimate-64-Fassung: UDP ($33-$35, auch
+  die alten $0A/$0B/$0E/$1E/$1F), IP-Anzeige ($3A), WLAN-Status ($3D),
+  Ping ($3E), Speedtest ($3F), TLS-Sockel ($40), Bearer-Token ($42)
+
+Gemessen auf einem MiSTer im LAN: HTTPS-Seiten in rund 0,3 s, 35 KB per
+HTTPS in 3,5 s (rund 10 KB/s mit der Empfangsschleife am C64), SID-Radio
+und Portal laufen, Control Center "Run Safe" komplett PASS.
+
+
+WAS ANDERS IST
+
+- Das Netz verwaltet das MiSTer-Linux. WLAN-Einstellungen vom C64 aus
+  ($02/$0D) aendern nichts, WPS, WLAN loeschen und feste IP sind nicht
+  vorhanden. $0C zeigt das aktuelle Netz.
+- Keine Firmware-Updates ($27).
+- Die Build-Info $41 fehlt absichtlich: das Control Center 1.2.2 sperrt
+  sich bei einer unbekannten Anbieterkennung. Ohne $41 behandelt es den
+  MiSTer wie eine echte WiC64; die PORT64-Tests zeigt es dann als
+  "not supported".
+- Der MiSTer meldet seine eigene MAC-Adresse. Im WiC64-Portal ist er
+  deshalb ein eigenes Geraet (einmal anmelden).
+
+
+FEHLERSUCHE
+
+Laeuft der Dienst?  per SSH oder Terminal:  ps | grep wic64d
+Protokoll ansehen:  Scripts > wic64_entfernen, dann per SSH
+                      WIC64D_LOG=1 python3 /media/fat/linux/wic64/wic64d.py
+                    (zeigt jede Anfrage; danach wieder wic64_einrichten)
+Einstellungen:      linux/wic64/wic64d.json (Server, Zeitzone, Token)
+
+
+QUELLEN UND LIZENZ
+
+Der Kern ist MiSTer-devel/C64_MiSTer (Commit 88354ba, GPL-2.0-or-later)
+mit dem Patch in WiC64-MiSTer/quellen/c64-wic64.patch und der Bruecke
+wic64_bridge.sv (GPL-3.0-or-later). Der Kern in diesem Paket steht damit
+unter der GPL-3.0 (Text: WiC64-MiSTer/GPL-3.0.txt). Bauen: Patch auf den
+Commit anwenden, wic64_bridge.sv nach rtl/ kopieren, mit Quartus Lite 17.0
+uebersetzen. Ausfuehrlich: WiC64-MiSTer/quellen/LIESMICH.md.
+
+wic64d.py: GPL-3.0-or-later. Der Befehlssatz folgt der WiC64-Firmware
+(github.com/WiC64-Team/wic64-firmware, BSD-2-Clause, Henning Liebenau).
+
+https://retro-modern.net

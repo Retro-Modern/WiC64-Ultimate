@@ -1,0 +1,508 @@
+; port64probe.tass - prueft die PORT64-Erweiterungen am WiC64-Dienst des
+; MiSTer (20.11.2026, Retro-Modern - https://retro-modern.net).
+;
+; Jeder Eintrag in der Tabelle unten ist ein Befehl (Protokoll R) mit
+; Nutzdaten. Angezeigt werden Status, Laenge und die ersten Bytes als Hex
+; und Text. Fuer Speedtest und UDP muss auf dem Rechner MAC (unten) laufen:
+;   python3 tests/port64gegenstelle.py
+;
+; Ergebnisse zusaetzlich ab $c000, 8 Byte je Test: Phase, Status, Laenge lo/hi,
+; die ersten 4 Datenbytes. $c0ff = Anzahl fertiger Tests.
+;
+; Bauen: 64tass -o port64probe.prg port64probe.tass
+
+        .cpu "6502"
+
+CHROUT  = $ffd2
+LINPRT  = $bdcd         ; A = hi, X = lo
+PP      = $f7
+TP      = $fb           ; Zeiger in die Testtabelle
+DST     = $fd
+BUF     = $4000
+RES     = $c000
+
+        * = $0801
+        .word (+), 10
+        .null $9e, format("%d", start)
++       .word 0
+
+start   lda #0
+        sta RES+$ff
+        lda #14
+        jsr CHROUT
+        lda #147
+        jsr CHROUT
+        lda #<s_titel
+        ldy #>s_titel
+        jsr prt
+        lda #<tests
+        sta TP
+        lda #>tests
+        sta TP+1
+
+next    ldy #0
+        lda (TP),y              ; Befehl, 0 = Ende
+        bne +
+        jmp fertig
++       cmp #$ff                ; $ff = 10 s Pause fuers Ablesen, dann neue Seite
+        bne +
+        ldx #0
+-       jsr warte1
+        jsr warte1
+        dex
+        bne -
+        ldx #50
+-       jsr warte1
+        dex
+        bne -
+        lda #147
+        jsr CHROUT
+        jmp _weiter
++       sta cmd
+        iny
+        lda (TP),y
+        sta wdh                 ; Wiederholen, bis Daten kommen (hoechstens n mal)
+        iny
+        lda (TP),y
+        sta plen
+        iny
+        lda (TP),y
+        sta plen+1
+        iny
+        lda (TP),y              ; Name (Zeiger)
+        sta name
+        iny
+        lda (TP),y
+        sta name+1
+        iny
+        lda (TP),y              ; Nutzdaten (Zeiger)
+        sta pdat
+        iny
+        lda (TP),y
+        sta pdat+1
+        lda name
+        ldy name+1
+        jsr prt
+        lda #13
+        jsr CHROUT
+
+_nochmal jsr request
+        bcs _fehl
+        jsr receive
+        bcs _fehl
+        lda #0
+        sta phase
+        lda wdh                 ; leere Antwort: noch einmal fragen
+        beq _fehl
+        lda len
+        ora len+1
+        bne _fehl
+        dec wdh
+        beq _fehl
+        ldx #20                 ; kurz warten
+-       jsr warte1
+        dex
+        bne -
+        jmp _nochmal
+
+_fehl   lda RES+$ff
+        asl
+        asl
+        asl
+        tax
+        lda phase
+        sta RES+0,x
+        lda status
+        sta RES+1,x
+        lda len
+        sta RES+2,x
+        lda len+1
+        sta RES+3,x
+        ldy #0
+-       lda BUF,y
+        sta RES+4,x
+        inx
+        iny
+        cpy #4
+        bne -
+        jsr zeige
+        inc RES+$ff
+_weiter clc
+        lda TP
+        adc #8
+        sta TP
+        bcc +
+        inc TP+1
++       jmp next
+
+fertig  lda #<s_ende
+        ldy #>s_ende
+        jsr prt
+        rts
+
+; ---------------------------------------------------------------------
+; Zeile: " St n  L n  hh hh hh hh hh hh hh hh" und Text
+zeige   lda phase
+        beq _ok
+        lda #<s_zeit
+        ldy #>s_zeit
+        jsr prt
+        lda #0
+        ldx phase
+        jsr LINPRT
+        lda #13
+        jsr CHROUT
+        rts
+_ok     lda #<s_status
+        ldy #>s_status
+        jsr prt
+        lda #0
+        ldx status
+        jsr LINPRT
+        lda #<s_len
+        ldy #>s_len
+        jsr prt
+        lda len+1
+        ldx len
+        jsr LINPRT
+        lda #32
+        jsr CHROUT
+        lda len+1               ; n = min(len, 8) Bytes als Hex
+        bne _acht
+        lda len
+        cmp #8
+        bcc +
+_acht   lda #8
++       sta anz
+        ldy #0
+-       cpy anz
+        beq _txt
+        lda BUF,y
+        jsr hex
+        iny
+        jmp -
+_txt    lda #13
+        jsr CHROUT
+        lda len+1               ; Text: bis 38 Zeichen
+        bne _v
+        lda len
+        cmp #38
+        bcc +
+_v      lda #38
++       sta anz
+        ldy #0
+-       cpy anz
+        beq _cr
+        lda BUF,y
+        cmp #10
+        beq _sp
+        cmp #13
+        beq _sp
+        cmp #0
+        beq _sp
+        jsr asc
+        jsr CHROUT
+        jmp _w
+_sp     lda #32
+        jsr CHROUT
+_w      iny
+        jmp -
+_cr     lda #13
+        jsr CHROUT
+        rts
+
+hex     pha
+        lsr
+        lsr
+        lsr
+        lsr
+        jsr _n
+        pla
+        and #15
+_n      cmp #10
+        bcc +
+        adc #6
++       adc #"0"
+        jsr asc
+        jmp CHROUT
+
+; ---------------------------------------------------------------------
+request lda #1
+        sta phase
+        lda #$ff
+        sta $dd03
+        lda $dd00
+        ora #$04
+        sta $dd00
+        lda $dd0d
+        lda #"R"
+        jsr sendb
+        bcs _f
+        lda cmd
+        jsr sendb
+        bcs _f
+        lda plen
+        jsr sendb
+        bcs _f
+        lda plen+1
+        jsr sendb
+        bcs _f
+        lda pdat
+        sta PP
+        lda pdat+1
+        sta PP+1
+        lda plen
+        sta zl
+        lda plen+1
+        sta zl+1
+_l      lda zl
+        ora zl+1
+        beq _ok
+        ldy #0
+        lda (PP),y
+        jsr sendb
+        bcs _f
+        inc PP
+        bne +
+        inc PP+1
++       lda zl
+        bne +
+        dec zl+1
++       dec zl
+        jmp _l
+_ok     clc
+_f      rts
+
+sendb   sta $dd01
+        lda #60
+        jmp warte
+
+receive lda #2
+        sta phase
+        lda #0
+        sta got
+        sta got+1
+        sta len
+        sta len+1
+        sta status
+        ldy #0
+-       sta BUF,y
+        iny
+        bne -
+        lda #$00
+        sta $dd03
+        lda $dd00
+        and #$fb
+        sta $dd00
+        lda #240
+        jsr warte4
+        bcs _f
+        lda #3
+        sta phase
+        lda $dd01
+        jsr w1
+        bcs _f
+        lda $dd01
+        sta status
+        jsr w1
+        bcs _f
+        lda $dd01
+        sta len
+        jsr w1
+        bcs _f
+        lda $dd01
+        sta len+1
+        lda #4
+        sta phase
+        lda #<BUF
+        sta DST
+        lda #>BUF
+        sta DST+1
+_loop   lda got
+        cmp len
+        bne +
+        lda got+1
+        cmp len+1
+        beq _ok
++       jsr w1
+        bcs _f
+        lda $dd01
+        ldy DST+1
+        cpy #$80
+        bcs +
+        ldy #0
+        sta (DST),y
+        inc DST
+        bne +
+        inc DST+1
++       inc got
+        bne _loop
+        inc got+1
+        jmp _loop
+_ok     clc
+_f      rts
+
+w1      lda #60
+        jmp warte
+
+warte1  lda $a2                 ; einen Jiffy warten
+-       cmp $a2
+        beq -
+        rts
+
+warte4  sta zaehl
+-       lda #16
+        jsr warte
+        bcc _ok
+        dec zaehl
+        bne -
+        sec
+        rts
+_ok     clc
+        rts
+
+warte   sta wmax
+        lda $a2
+        sta wst
+-       lda $dd0d
+        and #$10
+        bne _ja
+        lda $a2
+        sec
+        sbc wst
+        cmp wmax
+        bcc -
+        sec
+        rts
+_ja     clc
+        rts
+
+prt     sta PP
+        sty PP+1
+        ldy #0
+-       lda (PP),y
+        beq +
+        jsr asc
+        jsr CHROUT
+        iny
+        bne -
++       rts
+
+asc     cmp #13
+        beq _r
+        cmp #32
+        bcc _p
+        cmp #127
+        bcs _p
+        cmp #"a"
+        bcc +
+        cmp #"z"+1
+        bcs _p2
+        and #$df
+        rts
++       cmp #"A"
+        bcc _r
+        cmp #"Z"+1
+        bcs _p2
+        ora #$80
+        rts
+_p2     cmp #$5f
+        beq _p
+        cmp #"["
+        beq _r
+        cmp #"]"
+        beq _r
+        cmp #"@"
+        beq _r
+        cmp #$60
+        beq _p
+        cmp #$7b
+        bcs _p
+        rts
+_p      lda #"."
+_r      rts
+
+; ---------------------------------------------------------------------
+        .enc "none"
+MAC     = "192.168.1.10"        ; ANPASSEN: Rechner mit port64gegenstelle.py
+s_titel .null "PORT64-Probe (MiSTer)", 13
+s_status .null " St "
+s_len   .null " L "
+s_zeit  .null " Zeitueberschreitung, Phase "
+s_ende  .null "Fertig.", 13
+
+; Tabelle: Befehl, Wiederholungen, Laenge (Wort), Name, Nutzdaten
+test    .macro cmd, wdh, name, daten, ende
+        .byte \cmd, \wdh
+        .word \ende - \daten, \name, \daten
+        .endm
+
+tests   #test $40, 0, n1, d1, d1e
+        #test $23, 0, n2, d2, d2e
+        #test $22, 30, n3, d3, d3
+        #test $2e, 0, n4, d3, d3
+        #test $40, 0, n5, d5, d5e
+        #test $3e, 0, n6, d6, d6e
+        #test $ff, 0, n0, d3, d3
+        #test $3a, 0, n7, d3, d3
+        #test $3d, 0, n8, d3, d3
+        #test $3f, 0, n9, d9, d9e
+        #test $33, 0, n10, d10, d10e
+        #test $34, 0, n11, d11, d11e
+        #test $35, 0, n12, d12, d12e
+        #test $07, 0, n13, d3, d3
+        .byte 0
+
+n0      .null ""
+n1      .null "$40 TLS auf example.com:443"
+n2      .null "$23 HEAD senden"
+n3      .null "$22 lesen"
+n4      .null "$2e schliessen"
+n5      .null "$40 self-signed (muss 4)"
+n6      .null "$3e Ping 192.168.1.1"
+n7      .null "$3a IP-Einstellungen"
+n8      .null "$3d WLAN-Status"
+n9      .null "$3f Speedtest 3 s"
+n10     .null "$33 UDP-Port 6464"
+n11     .null "$34 UDP senden"
+n12     .null "$35 UDP empfangen"
+n13     .null "$07 veraltet (St 0, Text)"
+
+d1      .text "example.com:443"
+d1e
+d2      .text "HEAD / HTTP/1.0", 13, 10, "Host: example.com", 13, 10, 13, 10
+d2e
+d3
+d5      .text "self-signed.badssl.com:443"
+d5e
+d6      .byte 1
+        .text "192.168.1.1"         ; ANPASSEN: Router
+d6e
+d9      .byte 1, 3
+        .dword 1048576
+        .text "http://", MAC, ":8064/eins.bin"
+d9e
+d10     .word 6464
+d10e
+d11     .byte d11m - d11a
+d11a    .text MAC
+d11m    .word 8065
+        .text "hallo vom c64"
+d11e
+d12     .word 2000
+d12e
+
+cmd     .byte 0
+wdh     .byte 0
+plen    .word 0
+name    .word 0
+pdat    .word 0
+phase   .byte 0
+status  .byte 0
+len     .word 0
+got     .word 0
+anz     .byte 0
+zl      .word 0
+wmax    .byte 0
+wst     .byte 0
+zaehl   .byte 0
