@@ -48,6 +48,24 @@ DATA-Rahmen, dann `14`. Der C64 holt jedes Byte mit einem Lesezugriff auf
 Beginnt der C64 eine neue Anfrage (PA2 hoch), bevor die MARKE kam,
 verwirft der Dienst den Rest per DTR.
 
+## Fork und Downloader (seit 21.11.2026)
+
+Upstream will die WiC64 nicht im Hauptkern (MiSTer-devel/C64_MiSTer#238,
+Sorgelig: HPS-Seite zu aufwendig für die Nachfrage, „keep your fork“). Der
+Kern lebt deshalb als Fork **Retro-Modern/C64_MiSTer**, Zweig `wic64`
+(Standardzweig), lokal `~/Claude/C64_MiSTer-wic64` (Remote `fork`; `origin`
+ist upstream und hat keinen Push). Neue Upstream-Commits: `wic64` darauf
+umsetzen, `patches/c64-wic64.patch` neu erzeugen, bauen, auf dem Test-MiSTer
+prüfen, neue Fassung. Eine monatliche Routine schaut nach.
+
+Downloader/update_all: `datenbank.py <klon des db-zweigs>` baut aus
+`release/mister-<fassung>/` die `db.json` und `files/<fassung>/…` im Zweig
+`db` von Retro-Modern/WiC64-Ultimate (Arbeitskopie
+`~/Claude/WiC64-Ultimate-db`, ein Worktree). db_id `retro-modern/wic64` nie
+ändern. Testen ohne die Distribution anzufassen:
+`DOWNLOADER_INI_PATH=/tmp/x.ini bash Scripts/update.sh` mit nur unserem
+Abschnitt. raw.githubusercontent cacht bis 5 min.
+
 ## Dienst
 
 Arbeitet nur, solange `/tmp/CORENAME` = `C64` ist und kein UART-Modus
@@ -56,7 +74,8 @@ Einstellungen (Server, Zeitzone, Security-Token, Bearer-Token) in
 `wic64d.json` daneben, nur für root lesbar.
 `WIC64D_LOG=1` protokolliert Anfragen, `=2` zusätzlich jedes Ereignis.
 
-Auf dem MiSTer: `/media/fat/linux/wic64/wic64d.py`, gestartet aus
+Auf dem MiSTer seit 1.1: `/media/fat/Scripts/.config/wic64/wic64d.py` (in 1.0
+`linux/wic64/` – dorthin darf der Downloader nicht schreiben), gestartet aus
 `/media/fat/linux/user-startup.sh`:
 
 ```sh
@@ -64,8 +83,8 @@ Auf dem MiSTer: `/media/fat/linux/wic64/wic64d.py`, gestartet aus
 # vom Userport (OSD: WiC64 (Userport) = Enabled, UART Mode = None). Arbeitet
 # nur, solange der C64-Kern laeuft. Die Schleife startet den Dienst neu, falls
 # ihn das MiSTer-Skript uartmode beim Wechsel des UART-Modus beendet.
-if [ "$1" = "start" ] && [ -f /media/fat/linux/wic64/wic64d.py ]; then
-	setsid sh -c "while true; do python3 /media/fat/linux/wic64/wic64d.py; sleep 2; done" > /dev/null 2>&1 < /dev/null &
+if [ "$1" = "start" ] && [ -f /media/fat/Scripts/.config/wic64/wic64d.py ]; then
+	setsid sh -c "while true; do python3 /media/fat/Scripts/.config/wic64/wic64d.py; sleep 2; done" > /dev/null 2>&1 < /dev/null &
 fi
 ```
 

@@ -9,8 +9,9 @@
 
 import os, shutil, sys, zipfile
 
-FASSUNG = "1.0"
-DATUM = "20261120"
+FASSUNG = "1.1"
+KERN_DATUM = "20261120"          # Stand des Kerns (Name der .rbf)
+ZIP_DATUM = (2026, 11, 21, 12, 0, 0)
 HIER = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HIER)
 ZIEL = os.path.join(REPO, "release", "mister-" + FASSUNG)
@@ -43,8 +44,9 @@ def main():
     if os.path.getsize(rbf) < 1000000:
         sys.exit("Das ist kein Kern: " + rbf)
     shutil.rmtree(ZIEL, ignore_errors=True)
-    kopie(rbf, "_Computer", "C64_WiC64_%s.rbf" % DATUM)
-    kopie(os.path.join(HIER, "linux", "wic64d.py"), "linux", "wic64", "wic64d.py", lf=True)
+    kopie(rbf, "_Computer", "C64_WiC64_%s.rbf" % KERN_DATUM)
+    # Downloader darf nicht nach linux/ schreiben, daher seit 1.1 unter Scripts/.config
+    kopie(os.path.join(HIER, "linux", "wic64d.py"), "Scripts", ".config", "wic64", "wic64d.py", lf=True)
     for s in ("wic64_einrichten.sh", "wic64_entfernen.sh"):
         kopie(os.path.join(HIER, "paket", s), "Scripts", s, lf=True)
     crlf(os.path.join(HIER, "paket", "LIESMICH.TXT"), "WiC64-MiSTer", "LIESMICH.TXT")
@@ -65,7 +67,7 @@ def main():
             for d in sorted(dateien):
                 voll = os.path.join(wurzel, d)
                 name = os.path.relpath(voll, ZIEL)
-                info = zipfile.ZipInfo(name, date_time=(2026, 11, 20, 12, 0, 0))
+                info = zipfile.ZipInfo(name, date_time=ZIP_DATUM)
                 info.compress_type = zipfile.ZIP_DEFLATED
                 info.external_attr = (0o755 if name.endswith(".sh") or name.endswith(".py")
                                       else 0o644) << 16

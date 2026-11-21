@@ -1,4 +1,4 @@
-WiC64 fuer den C64-Kern des MiSTer - Fassung 1.0 (20.11.2026)
+WiC64 fuer den C64-Kern des MiSTer - Fassung 1.1 (21.11.2026)
 Retro-Modern - https://retro-modern.net
 
 Eine WiC64 am Userport des MiSTer-C64-Kerns, ohne Zusatzhardware. Der Kern
@@ -14,7 +14,7 @@ INHALT
 
   _Computer/C64_WiC64_20261120.rbf   C64-Kern mit WiC64 (MiSTer-devel
                                      C64_MiSTer, Stand 29.10.2026)
-  linux/wic64/wic64d.py              der Dienst (Python 3, liegt dem
+  Scripts/.config/wic64/wic64d.py    der Dienst (Python 3, liegt dem
                                      MiSTer-Linux bei)
   Scripts/wic64_einrichten.sh        Dienst eintragen und starten
   Scripts/wic64_entfernen.sh         Dienst anhalten und austragen
@@ -23,7 +23,7 @@ INHALT
 
 EINRICHTEN
 
-1. Die Ordner _Computer, linux und Scripts auf die SD-Karte des MiSTer
+1. Die Ordner _Computer und Scripts auf die SD-Karte des MiSTer
    kopieren (ins Hauptverzeichnis, vorhandene Ordner zusammenfuehren).
 2. Im MiSTer-Menue: Scripts > wic64_einrichten. Das traegt den Dienst in
    linux/user-startup.sh ein (Sicherung: user-startup.sh.vor-wic64) und
@@ -40,8 +40,25 @@ sich heraus.
 Ausprobieren: den WiC64-Launcher von https://wic64.net laden (Portal mit
 SID-Radio und Programmen), oder das WiC64 Control Center.
 
-Entfernen: Scripts > wic64_entfernen. Kern und Ordner linux/wic64 dann von
-Hand loeschen, wenn gewuenscht.
+Entfernen: Scripts > wic64_entfernen. Kern und Ordner Scripts/.config/wic64
+dann von Hand loeschen, wenn gewuenscht.
+
+Von 1.0 auf 1.1: einfach das neue Paket aufspielen und wic64_einrichten noch
+einmal starten. Es zieht den Dienst samt Einstellungen um; der alte Ordner
+linux/wic64 kann danach weg.
+
+
+UPDATES UEBER DEN DOWNLOADER (update_all)
+
+Statt das Zip von Hand aufzuspielen, kann der MiSTer Kern und Dienst selbst
+holen und aktuell halten. Dazu am Ende von /media/fat/downloader.ini
+eintragen:
+
+  [retro-modern/wic64]
+  db_url = https://raw.githubusercontent.com/Retro-Modern/WiC64-Ultimate/db/db.json
+
+Danach update_all (oder downloader) starten und einmal Scripts >
+wic64_einrichten. Weitere Updates kommen mit jedem update_all.
 
 
 WAS GEHT
@@ -76,9 +93,9 @@ FEHLERSUCHE
 
 Laeuft der Dienst?  per SSH oder Terminal:  ps | grep wic64d
 Protokoll ansehen:  Scripts > wic64_entfernen, dann per SSH
-                      WIC64D_LOG=1 python3 /media/fat/linux/wic64/wic64d.py
+                      WIC64D_LOG=1 python3 /media/fat/Scripts/.config/wic64/wic64d.py
                     (zeigt jede Anfrage; danach wieder wic64_einrichten)
-Einstellungen:      linux/wic64/wic64d.json (Server, Zeitzone, Token)
+Einstellungen:      Scripts/.config/wic64/wic64d.json (Server, Zeitzone, Token)
 
 
 QUELLEN UND LIZENZ

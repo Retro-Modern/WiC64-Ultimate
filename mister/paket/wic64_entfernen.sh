@@ -1,18 +1,20 @@
 #!/bin/sh
-# WiC64 fuer den C64-Kern - entfernen / remove
+# WiC64 fuer den C64-Kern - entfernen / remove (Fassung 1.1)
 # Retro-Modern - https://retro-modern.net
 #
 # Haelt den WiC64-Dienst an und nimmt ihn aus user-startup.sh heraus.
-# Der Ordner linux/wic64 und der Kern bleiben liegen.
+# Der Ordner Scripts/.config/wic64 und der Kern bleiben liegen.
 # Stops the WiC64 service and removes it from user-startup.sh.
 
 US=/media/fat/linux/user-startup.sh
+DIENST=/media/fat/Scripts/.config/wic64/wic64d.py
+ALT=/media/fat/linux/wic64/wic64d.py
 
-DIENST=/media/fat/linux/wic64/wic64d.py
-# Erst die Neustart-Schleife, dann den Dienst - nur diese beiden Befehlszeilen.
-for muster in "sh -c while true; do python3 $DIENST" "python3 $DIENST"; do
+# Erst die Neustart-Schleife, dann den Dienst - nur diese Befehlszeilen.
+for muster in "sh -c while true; do python3 $DIENST" "sh -c while true; do python3 $ALT" \
+              "python3 $DIENST" "python3 $ALT"; do
 	for f in /proc/[0-9]*/cmdline; do
-		case "$(tr '\0' ' ' < "$f" 2> /dev/null)" in
+		case "$(tr '\0' ' ' 2> /dev/null < "$f")" in
 			"$muster"*)
 				p=${f#/proc/}
 				kill "${p%/cmdline}" 2> /dev/null ;;

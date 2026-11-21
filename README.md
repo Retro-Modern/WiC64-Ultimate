@@ -26,7 +26,7 @@ WiC64 firmware 2.4.4 command set and the PORT64 extensions.
 | `u64e2/` | Ultimate 64 Elite II, firmware 3.15 | **B5RM3** (Beta 5 + changes below) | built on macOS arm64, tested on hardware |
 | `u64i/` | Ultimate 64 / Elite, **first generation** (Nios II), firmware 3.15a | **B5RM3** (patch against Gideon 3.15a + `u64e2/`) | built on macOS arm64, tested on hardware (LAN, WLAN) |
 | `c64u/` | C64 Ultimate, firmware 1.1.0 | Beta 2 + `WOLFSSL_ALT_CERT_CHAINS` + reset fix | **not built, not tested** (no device here) |
-| `mister/` | MiSTer, C64 core (MiSTer-devel C64_MiSTer 88354ba) | **1.0** (core patch + bridge + Linux service) | tested on hardware and by Forum64 users |
+| `mister/` | MiSTer, C64 core (MiSTer-devel C64_MiSTer 88354ba) | **1.1** (core patch + bridge + Linux service, Downloader database) | tested on hardware and by Forum64 users |
 | `tests/` | test programs (64tass) and telnet helpers | | |
 
 **Download** (ready-to-use package, CFW + ESP app + restore + Control Center):
@@ -109,6 +109,17 @@ MiSTer-devel/C64_MiSTer commit `88354ba`, copy `mister/rtl/wic64_bridge.sv`
 to `rtl/`, compile with Quartus Lite 17.0. The service `mister/linux/wic64d.py`
 needs only the Python 3 of MiSTer Linux; `mister/paket.py <C64.rbf>` builds the
 package. Setup and details: `mister/paket/README.TXT`, `mister/LIESMICH.md` (German).
+The core with the WiC64 lives as a fork:
+[Retro-Modern/C64_MiSTer](https://github.com/Retro-Modern/C64_MiSTer) (branch `wic64`).
+
+Updates with Downloader / update_all – add to `/media/fat/downloader.ini`:
+
+```ini
+[retro-modern/wic64]
+db_url = https://raw.githubusercontent.com/Retro-Modern/WiC64-Ultimate/db/db.json
+```
+
+then run update_all and once `Scripts > wic64_einrichten`.
 
 The Control Center (`WIC64CC.PRG`) is included as a binary only, as in the
 original packages.
@@ -150,7 +161,7 @@ nach dem Befehlssatz der WiC64-Firmware 2.4.4 und den PORT64-Erweiterungen.
 | `u64e2/` | Ultimate 64 Elite II, Firmware 3.15 | **B5RM3** (Beta 5 + Änderungen unten) | auf macOS arm64 gebaut, am Gerät getestet |
 | `u64i/` | Ultimate 64 / Elite, **erste Generation** (Nios II), Firmware 3.15a | **B5RM3** (Patch gegen Gideon 3.15a + `u64e2/`) | auf macOS arm64 gebaut, am Gerät getestet (LAN, WLAN) |
 | `c64u/` | C64 Ultimate, Firmware 1.1.0 | Beta 2 + `WOLFSSL_ALT_CERT_CHAINS` + Reset-Fix | **weder gebaut noch getestet** (kein Gerät) |
-| `mister/` | MiSTer, C64-Kern (MiSTer-devel C64_MiSTer 88354ba) | **1.0** (Kern-Patch + Brücke + Linux-Dienst) | am Gerät und von Forum64-Nutzern getestet |
+| `mister/` | MiSTer, C64-Kern (MiSTer-devel C64_MiSTer 88354ba) | **1.1** (Kern-Patch + Brücke + Linux-Dienst, Downloader-Datenbank) | am Gerät und von Forum64-Nutzern getestet |
 | `tests/` | Testprogramme (64tass) und Telnet-Helfer | | |
 
 **Download** (fertiges Paket: CFW, ESP-App, Wiederherstellung, Control Center):
@@ -233,7 +244,18 @@ MiSTer-devel/C64_MiSTer, Commit `88354ba`, anwenden, `mister/rtl/wic64_bridge.sv
 nach `rtl/` kopieren, mit Quartus Lite 17.0 übersetzen. Der Dienst
 `mister/linux/wic64d.py` braucht nur das Python 3 des MiSTer-Linux;
 `mister/paket.py <C64.rbf>` baut das Paket. Einrichten und Einzelheiten:
-`mister/paket/LIESMICH.TXT`, `mister/LIESMICH.md`.
+`mister/paket/LIESMICH.TXT`, `mister/LIESMICH.md`. Der Kern mit WiC64 lebt
+als Fork: [Retro-Modern/C64_MiSTer](https://github.com/Retro-Modern/C64_MiSTer)
+(Zweig `wic64`).
+
+Updates über Downloader / update_all – in `/media/fat/downloader.ini` eintragen:
+
+```ini
+[retro-modern/wic64]
+db_url = https://raw.githubusercontent.com/Retro-Modern/WiC64-Ultimate/db/db.json
+```
+
+danach update_all und einmal `Scripts > wic64_einrichten`.
 
 Das Control Center (`WIC64CC.PRG`) liegt wie in den Originalpaketen nur als
 Programmdatei bei.
