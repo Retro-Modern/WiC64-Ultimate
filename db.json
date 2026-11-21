@@ -1,24 +1,27 @@
 {
   "v": 1,
   "db_id": "retro-modern/wic64",
-  "timestamp": 1795242003,
-  "base_files_url": "https://raw.githubusercontent.com/Retro-Modern/WiC64-Ultimate/db/files/1.1/",
+  "timestamp": 1795242253,
   "files": {
     "Scripts/wic64_einrichten.sh": {
       "hash": "e284c7c92bba947fcb9d4a2e96e5714d",
-      "size": 3496
+      "size": 3496,
+      "url": "https://raw.githubusercontent.com/Retro-Modern/WiC64-Ultimate/db/files/e284c7c92bba947fcb9d4a2e96e5714d/wic64_einrichten.sh"
     },
     "Scripts/wic64_entfernen.sh": {
       "hash": "0b4c0372ac2edfd7e478a091aaa72281",
-      "size": 1384
+      "size": 1384,
+      "url": "https://raw.githubusercontent.com/Retro-Modern/WiC64-Ultimate/db/files/0b4c0372ac2edfd7e478a091aaa72281/wic64_entfernen.sh"
     },
     "Scripts/.config/wic64/wic64d.py": {
       "hash": "fe7bd1e3afb022146fb1b505cfb2c31b",
-      "size": 54933
+      "size": 54933,
+      "url": "https://raw.githubusercontent.com/Retro-Modern/WiC64-Ultimate/db/files/fe7bd1e3afb022146fb1b505cfb2c31b/wic64d.py"
     },
     "_Computer/C64_WiC64_20261120.rbf": {
       "hash": "e195e3a6098eb73471a7db089b477fd6",
       "size": 3977848,
+      "url": "https://raw.githubusercontent.com/Retro-Modern/WiC64-Ultimate/db/files/e195e3a6098eb73471a7db089b477fd6/C64_WiC64_20261120.rbf",
       "tangle": [
         "retro-modern-c64-wic64"
       ]
