@@ -1,15 +1,15 @@
 {
   "v": 1,
   "db_id": "retro-modern/wic64",
-  "timestamp": 1795241896,
+  "timestamp": 1795242003,
   "base_files_url": "https://raw.githubusercontent.com/Retro-Modern/WiC64-Ultimate/db/files/1.1/",
   "files": {
     "Scripts/wic64_einrichten.sh": {
-      "hash": "f4901d6fbc02381576c1677eda347080",
+      "hash": "e284c7c92bba947fcb9d4a2e96e5714d",
       "size": 3496
     },
     "Scripts/wic64_entfernen.sh": {
-      "hash": "44875919682b3cdfce532b232388f968",
+      "hash": "0b4c0372ac2edfd7e478a091aaa72281",
       "size": 1384
     },
     "Scripts/.config/wic64/wic64d.py": {

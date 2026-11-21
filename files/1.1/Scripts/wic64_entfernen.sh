@@ -14,7 +14,7 @@ ALT=/media/fat/linux/wic64/wic64d.py
 for muster in "sh -c while true; do python3 $DIENST" "sh -c while true; do python3 $ALT" \
               "python3 $DIENST" "python3 $ALT"; do
 	for f in /proc/[0-9]*/cmdline; do
-		case "$(tr '\0' ' ' < "$f" 2> /dev/null)" in
+		case "$(tr '\0' ' ' 2> /dev/null < "$f")" in
 			"$muster"*)
 				p=${f#/proc/}
 				kill "${p%/cmdline}" 2> /dev/null ;;
