@@ -9,7 +9,7 @@ import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-APP_NAME = 'WiC64_C64U_Beta2.ue2'
+APP_NAME = 'WiC64_C64U_B2RM1.ue2'
 RESTORE_NAME = 'C64U_ESP_STOCK_1.11.ESP'
 
 

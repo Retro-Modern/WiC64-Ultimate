@@ -25,7 +25,7 @@ WiC64 firmware 2.4.4 command set and the PORT64 extensions.
 |---|---|---|---|
 | `u64e2/` | Ultimate 64 Elite II, firmware 3.15 | **B5RM3** (Beta 5 + changes below) | built on macOS arm64, tested on hardware |
 | `u64i/` | Ultimate 64 / Elite, **first generation** (Nios II), firmware 3.15a | **B5RM3** (patch against Gideon 3.15a + `u64e2/`) | built on macOS arm64, tested on hardware (LAN, WLAN) |
-| `c64u/` | C64 Ultimate, firmware 1.1.0 | Beta 2 + `WOLFSSL_ALT_CERT_CHAINS` + reset fix | **not built, not tested** (no device here) |
+| `c64u/` | C64 Ultimate, firmware 1.1.0 | **B2RM1** (Beta 2 + `WOLFSSL_ALT_CERT_CHAINS` + reset fix) | built (Ubuntu 24.04 x86_64), **not tested on a C64U** (no device here) |
 | `mister/` | MiSTer, C64 core (MiSTer-devel C64_MiSTer 88354ba) | **1.1** (core patch + bridge + Linux service, Downloader database) | tested on hardware and by Forum64 users |
 | `tests/` | test programs (64tass) and telnet helpers | | |
 
@@ -33,7 +33,7 @@ WiC64 firmware 2.4.4 command set and the PORT64 extensions.
 - https://retro-modern.net/downloads.html#wic64
 - GitHub releases: https://github.com/Retro-Modern/WiC64-Ultimate/releases
   (`u64e2-…` for the Elite II, `u64i-…` for the first generation,
-  `mister-…` for the MiSTer)
+  `c64u-…` for the C64 Ultimate, `mister-…` for the MiSTer)
 
 Discussion (German): https://www.forum64.de/index.php?thread/167059/
 
@@ -45,7 +45,7 @@ Discussion (German): https://www.forum64.de/index.php?thread/167059/
   until it was stopped and started by hand. Now the service runs the normal
   verified stop/restore and starts a new session on its own (~1 s). A stopped
   WiC64 stays stopped; other errors behave as before (`p08_service.cc`,
-  `reset_restart`; also applied to `c64u/`, unbuilt).
+  `reset_restart`; also in `c64u/` as B2RM1).
 - ESP app **B5RM1**: certificate chains are built by mbedTLS from the app's own
   table of 118 Mozilla roots (`p18_ca.c`, taken from C64U Beta 2), so servers
   that send an extra cross-signed certificate (e.g. example.com) work. The
@@ -79,7 +79,8 @@ installation ~50 s) both worked.
 
 - WiC64 Status shows the TLS engine of the last HTTPS connection ("ESP TLS (BIO)"
   or "wolfSSL" on the CPU); before the first connection it says "wolfSSL".
-- C64U: no build on macOS (`setup.py` requires Linux x86_64 or WSL2).
+- C64U B2RM1 has not run on a C64U yet. If in doubt, use Beta 2 by
+  TheRealWanderer (also on the releases page).
 
 ## Build
 
@@ -97,7 +98,13 @@ On macOS arm64 this produced the tested CFW byte for byte (sha256
 `build.py … --esp-app esp-build/WiC64_ESP.ESP`.
 
 **C64U** (`c64u/`, Ubuntu 24.04 x86_64 or WSL2): `./setup.sh`, then
-`./build.sh all`. See `c64u/README.md`.
+`./build.sh all`. See `c64u/README.md`. Use a Linux file system (ext4):
+`esp/setup.py` hashes the ESP-IDF tree including the executable bit, so a
+share that marks every file executable fails the check. On a Mac with Apple
+Silicon: an Ubuntu arm64 VM with Rosetta for Linux and Docker, then build in
+an `ubuntu:24.04` container with `--platform linux/amd64`. Rebuilding the
+unmodified Beta 2 this way gives Wanderer's UE2 except for build date, build
+host and the embedded ESP app's timestamp.
 
 **U64I** (`u64i/`, first generation, macOS arm64): nios2-elf GCC 13.3
 (`u64i/werkzeug/nios2-toolchain.sh`), then `u64i/bauen.sh <workdir>`. The
@@ -160,7 +167,7 @@ nach dem Befehlssatz der WiC64-Firmware 2.4.4 und den PORT64-Erweiterungen.
 |---|---|---|---|
 | `u64e2/` | Ultimate 64 Elite II, Firmware 3.15 | **B5RM3** (Beta 5 + Änderungen unten) | auf macOS arm64 gebaut, am Gerät getestet |
 | `u64i/` | Ultimate 64 / Elite, **erste Generation** (Nios II), Firmware 3.15a | **B5RM3** (Patch gegen Gideon 3.15a + `u64e2/`) | auf macOS arm64 gebaut, am Gerät getestet (LAN, WLAN) |
-| `c64u/` | C64 Ultimate, Firmware 1.1.0 | Beta 2 + `WOLFSSL_ALT_CERT_CHAINS` + Reset-Fix | **weder gebaut noch getestet** (kein Gerät) |
+| `c64u/` | C64 Ultimate, Firmware 1.1.0 | **B2RM1** (Beta 2 + `WOLFSSL_ALT_CERT_CHAINS` + Reset-Fix) | gebaut (Ubuntu 24.04 x86_64), **nicht am C64U getestet** (kein Gerät) |
 | `mister/` | MiSTer, C64-Kern (MiSTer-devel C64_MiSTer 88354ba) | **1.1** (Kern-Patch + Brücke + Linux-Dienst, Downloader-Datenbank) | am Gerät und von Forum64-Nutzern getestet |
 | `tests/` | Testprogramme (64tass) und Telnet-Helfer | | |
 
@@ -168,7 +175,7 @@ nach dem Befehlssatz der WiC64-Firmware 2.4.4 und den PORT64-Erweiterungen.
 - https://retro-modern.net/downloads.html#wic64
 - GitHub-Releases: https://github.com/Retro-Modern/WiC64-Ultimate/releases
   (`u64e2-…` für die Elite II, `u64i-…` für die erste Generation,
-  `mister-…` für den MiSTer)
+  `c64u-…` für den C64 Ultimate, `mister-…` für den MiSTer)
 
 Diskussion: https://www.forum64.de/index.php?thread/167059/
 
@@ -180,7 +187,7 @@ Diskussion: https://www.forum64.de/index.php?thread/167059/
   WiC64 blieb stumm, bis man ihn von Hand stoppte und neu startete. Jetzt
   läuft der normale geprüfte Stop/Restore und danach von selbst eine neue
   Sitzung (~1 s). Ein gestoppter WiC64 bleibt gestoppt, andere Fehler wie
-  bisher (`p08_service.cc`, `reset_restart`; auch in `c64u/`, ungebaut).
+  bisher (`p08_service.cc`, `reset_restart`; auch in `c64u/` als B2RM1).
 - ESP-App **B5RM1**: Zertifikatsketten baut mbedTLS aus einer eigenen Tabelle
   mit 118 Mozilla-Wurzeln (`p18_ca.c`, aus C64U Beta 2). Server, die ein
   zusätzliches Querzertifikat mitschicken (z. B. example.com), gehen damit.
@@ -214,7 +221,8 @@ Installation ~50 s) liefen.
 
 - WiC64 Status zeigt den TLS-Weg der letzten HTTPS-Verbindung („ESP TLS (BIO)“
   oder „wolfSSL“ auf der CPU); vor der ersten Verbindung steht dort „wolfSSL“.
-- C64U: kein Bau auf macOS (`setup.py` verlangt Linux x86_64 oder WSL2).
+- C64U B2RM1 ist noch nie auf einem C64U gelaufen. Im Zweifel Beta 2 von
+  TheRealWanderer nehmen (liegt ebenfalls bei den Releases).
 
 ## Bauen
 
@@ -232,7 +240,13 @@ Auf macOS arm64 kam dabei bytegleich die getestete CFW heraus (sha256
 `build.py … --esp-app esp-build/WiC64_ESP.ESP`.
 
 **C64U** (`c64u/`, Ubuntu 24.04 x86_64 oder WSL2): `./setup.sh`, dann
-`./build.sh all`. Siehe `c64u/README.md`.
+`./build.sh all`. Siehe `c64u/README.md`. Nur auf einem Linux-Dateisystem
+(ext4) bauen: `esp/setup.py` prüft den ESP-IDF-Baum samt Ausführbar-Bit,
+auf einer Freigabe, die jede Datei ausführbar macht, scheitert die Prüfung.
+Auf einem Mac mit Apple Silicon: Ubuntu-arm64-VM mit Rosetta für Linux und
+Docker, gebaut wird in einem `ubuntu:24.04`-Container mit
+`--platform linux/amd64`. Die unveränderte Beta 2 kommt so bis auf Baudatum,
+Baurechner und Zeitstempel der eingebetteten ESP-App gleich zu Wanderers UE2 heraus.
 
 **U64I** (`u64i/`, erste Generation, macOS arm64): nios2-elf GCC 13.3
 (`u64i/werkzeug/nios2-toolchain.sh`), dann `u64i/bauen.sh <arbeitsordner>`.

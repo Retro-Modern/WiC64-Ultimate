@@ -258,11 +258,11 @@ def main():
         payload = payload_file.read_bytes()
         if entry != 0x03000000 or not 0 < len(payload) <= 0x00c00000:
             raise RuntimeError('Application exceeds reviewed C64U RAM window')
-        output = BUILD / 'WiC64_C64U_Beta2.ue2'
+        output = BUILD / 'WiC64_C64U_B2RM1.ue2'
         output.write_bytes(struct.pack('<III', 0x03000000, len(payload), entry) + payload)
         validation = validate(elf, output, image)
-        shutil.copy2(elf, BUILD / 'WiC64_C64U_Beta2.elf')
-        shutil.copy2(APP / APP_OUTPUT / 'ultimate.map', BUILD / 'WiC64_C64U_Beta2.map')
+        shutil.copy2(elf, BUILD / 'WiC64_C64U_B2RM1.elf')
+        shutil.copy2(APP / APP_OUTPUT / 'ultimate.map', BUILD / 'WiC64_C64U_B2RM1.map')
         (BUILD / 'source_manifest.json').write_text(json.dumps(after, indent=2) + '\n')
         report = {'status': 'PASS', 'source_revision': json.loads((ROOT / 'source_revision.json').read_text()),
                   'native_flags': FLAGS, 'native_command': command, 'selected_esp_input': image,
